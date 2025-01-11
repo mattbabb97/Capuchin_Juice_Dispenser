@@ -1,0 +1,702 @@
+---
+title: "Group Prosociality with OT"
+output: word_document
+date: "2022-09-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Install your Packages}
+#install.packages("rstudioapi")
+#install.packages("openxlsx")
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("tidyverse")
+#install.packages("pscl")
+#install.packages("multcomp")
+#install.packages("lsmeans")
+#install.packages("fitdistrplus")
+#install.packages("glmmTMB")
+#install.packages("overdisp")
+#install.packages("sjPlot")
+#install.packages("Rmisc")
+#install.packages("rstatix")
+#install.packages("MASS")
+#install.packages("gridExtra")
+#install.packages("grid")
+#install.packages("gridtext")
+
+```
+
+```{r Library your Packages}
+library(rstudioapi)
+library(openxlsx)
+library(readxl)
+library(dplyr)
+library(plyr)
+library(tidyr)
+library(tidyverse)
+library(pscl)
+library(multcomp)
+library(emmeans)
+library(lsmeans)
+library(fitdistrplus)
+library(lme4)
+library(car)
+library(glmmTMB)
+library(emmeans)
+library(overdisp)
+library(sjPlot)
+library(Rmisc)
+library(rstatix)
+library(MASS)
+library(gridExtra)
+library(grid)
+library(gridtext)
+
+```
+
+
+```{r Read the Data File}
+
+model2.data <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Model_2_Data_Frame.xlsx")
+
+```
+
+```{r Clean the Data Frames}
+
+model2.data$OT <- ifelse(model2.data$fur_rubbing == 1, 1, ifelse(model2.data$grooming == 1, 1, 0))
+
+
+model2.data$subject <- as.factor(model2.data$subject)
+model2.data$group <- as.factor(model2.data$group)
+model2.data$training <- as.factor(model2.data$training)
+model2.data$block <- as.numeric(model2.data$block)
+model2.data$date <- as.Date(model2.data$date, format = "%m/%d/%Y", optional = TRUE)
+model2.data$session_number <- as.numeric(model2.data$session_number)
+model2.data$session_type <- as.factor(model2.data$session_type)
+model2.data$OT <- as.factor(model2.data$OT)
+model2.data$recipient <- as.factor(model2.data$recipient)
+model2.data$csi <- as.numeric(model2.data$csi)
+model2.data$related <- as.factor(model2.data$related)
+model2.data$total_pull <- as.numeric(model2.data$total_pull)
+model2.data$total_prosocial <- as.numeric(model2.data$total_prosocial)
+model2.data$indiv_pull <- as.numeric(model2.data$indiv_pull)
+model2.data$indiv_run <- as.numeric(model2.data$indiv_run)
+model2.data$indiv_agg <- as.numeric(model2.data$indiv_agg)
+model2.data$total_run <- as.numeric(model2.data$total_run)
+model2.data$total_aggression <- as.numeric(model2.data$total_aggression)
+
+
+
+levels(model2.data$subject)
+class(model2.data$date)
+levels(model2.data$session_type)
+levels(model2.data$OT)
+levels(model2.data$training)
+levels(model2.data$recipient)
+
+```
+
+```{r Merge with demographics}
+demographics <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Monkey_Demographics.xlsx")
+
+merged.data <- merge(x = demographics, y = model2.data, by.x = "subject", by.y = "subject")
+nrow(merged.data) == nrow(merged.data)
+head(merged.data)
+
+merged.data <- arrange(merged.data, group, session_number, subject)
+head(merged.data)
+
+merged.data$sex <- as.factor(merged.data$sex)
+merged.data$age <- as.numeric(merged.data$age)
+merged.data$rank <- as.numeric(merged.data$rank)
+merged.data$recipient_rank <- as.numeric(merged.data$recipient_rank)
+merged.data$relative_rank <- as.factor(merged.data$relative_rank)
+merged.data$rank_score <- as.numeric(merged.data$rank_score)
+
+merged.data$rank_diff <- merged.data$rank - merged.data$recipient_rank
+
+# Create a back up that is sorted how you like it
+summary.data <- model2.data
+# Move on with the merged data file
+model2.data <- merged.data
+rm(merged.data)
+
+model2.data$subject <- as.factor(model2.data$subject)
+levels(model2.data$subject)
+```
+
+```{r Make a Data Frame for each Group}
+griffin.data <- subset(model2.data, group == "griffin")
+logan.data <- subset(model2.data, group == "logan")
+nkima.data <- subset(model2.data, group == "nkima")
+mason.data <- subset(model2.data, group == "mason")
+```
+
+
+```{r For Model 2, we are only focused on the Accessible (Exp) Sessions}
+accessible.data <- subset(model2.data, session_type == "Accessible")
+summary(accessible.data$session_type)
+```
+
+##From MSc Model 1 [FINAL].RMD
+
+Total Pulls in the Accessible Sessions: 4933
+
+Total Pulls with at least 1 recipient: 3388
+
+Total Pulls with no recipient: 1523
+
+##From MSc Model 3 [FINAL].RMD
+
+Total Pulls followed by a Run: 2562
+
+Total Pulls followed by an Aggression: 103
+
+
+```{r Descriptive Statistics of Pulls and Recipients}
+# Total number of individual receives
+sum(accessible.data$indiv_pull)
+
+summary(accessible.data$indiv_pull)
+
+# Average amount of pulls per OT Condition
+summarySE(accessible.data, measurevar="indiv_pull", groupvars=c("OT"))
+
+# This tells us who the recipient of most of the pulls was (This includes recipient and in proximity)
+ddply(accessible.data, ~ recipient, summarise, receiving_sum=sum(indiv_pull, na.rm = TRUE))
+# This breaks this down into each group so percentages can easily be calculated
+ddply(griffin.data, ~ recipient, summarise, receiving_sum=sum(indiv_pull, na.rm = TRUE))
+ddply(logan.data, ~ recipient, summarise, receiving_sum=sum(indiv_pull, na.rm = TRUE))
+ddply(nkima.data, ~ recipient, summarise, receiving_sum=sum(indiv_pull, na.rm = TRUE))
+ddply(mason.data, ~ recipient, summarise, receiving_sum=sum(indiv_pull, na.rm = TRUE))
+
+
+
+```
+
+```{r Visualize Pulls by CSI}
+summary(accessible.data$csi)
+
+view_df(accessible.data, show.frq = T, show.prc = T, show.na = T)
+
+df<-summarySE(accessible.data, measurevar="indiv_pull", groupvars=c("subject", "recipient"))
+df
+
+accessible.data.visual <- accessible.data
+```
+
+
+```{r Visualize Pulls by CSI}
+accessible.data.visual$subject <- as.factor(accessible.data.visual$subject)
+levels(accessible.data.visual$subject)
+
+griffin.visual <- subset(accessible.data.visual, group == "griffin")
+logan.visual <- subset(accessible.data.visual, group == "logan")
+mason.visual <- subset(accessible.data.visual, group == "mason")
+nkima.visual <- subset(accessible.data.visual, group == "nkima")
+
+Logan_CSI <- ggplot(logan.visual, aes(x = csi, y = indiv_pull, fill = OT)) +
+              geom_point(size = 3.0, position = position_dodge(width = 0.1), pch = 21, color = "black") +
+              geom_smooth(aes(color = OT), method = glm, se = FALSE, fullrange = FALSE, level = 0.95) +
+              xlab("Composite Sociality Index (CSI)") +
+              ylab("Number of Pulls per Session") +
+              ylim(0, 65) +
+              xlim(0, 5) +
+              labs(title = "Group 1 (n = 6)") +
+              geom_vline(xintercept = 1, linetype = "dashed", color = "black") +
+              #facet_wrap(~subject) +
+              #facet_wrap(~ factor(group, 
+              #                    labels = c("(a) Griffin", "(b) Logan", "(c) Mason", "(d) Nkima")),
+              #                    ncol=2) +
+              theme_bw() +
+              scale_fill_manual(values = c("gray69", "blue2")) +
+              scale_color_manual(values = c("gray69", "blue2")) +
+              annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+              annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+              theme(panel.grid.major.x = element_blank(),
+                    panel.grid.minor.x = element_blank(),
+                    #axis.title = element_blank(),
+                    legend.position = "none",
+                    plot.title = element_text(hjust = 0.5),
+                    panel.grid.major.y = element_blank(),
+                    panel.grid.minor.y = element_blank())
+
+
+Griffin_CSI <- ggplot(griffin.visual, aes(x = csi, y = indiv_pull, fill = OT)) +
+              geom_point(size = 3.0, position = position_dodge(width = 0.1), pch = 21, color = "black") +
+              geom_smooth(aes(color = OT), method = glm, se = FALSE, fullrange = FALSE, level = 0.95) +
+              xlab("Composite Sociality Index (CSI)") +
+              ylab("Lever Presses per Session") +
+              #ylim(0, 65) +
+              xlim(0, 5) +
+              labs(title = "Group 2 (n = 5)") +
+              geom_vline(xintercept = 1, linetype = "dashed", color = "black") +
+              #facet_wrap(~subject) +
+              #facet_wrap(~ factor(group, 
+              #                    labels = c("(a) Griffin", "(b) Logan", "(c) Mason", "(d) Nkima")),
+              #                    ncol=2) +
+              theme_bw() +
+              scale_fill_manual(values = c("gray69", "blue2"), labels = c('0' = "No OT", "1" = "+ OT")) +
+              scale_color_manual(values = c("gray69", "blue2"), labels = c('0' = "No OT", "1" = "+ OT")) +
+              annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+              annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+              theme(panel.grid.major.x = element_blank(),
+                    panel.grid.minor.x = element_blank(),
+                    #axis.title = element_blank(),
+                    legend.position = c(0.85, 0.75),
+                    legend.title = element_blank(),
+                    plot.title = element_text(hjust = 0.5),
+                    panel.grid.major.y = element_blank(),
+                    panel.grid.minor.y = element_blank())
+
+
+Nkima_CSI <- ggplot(nkima.visual, aes(x = csi, y = indiv_pull, fill = OT)) +
+              geom_point(size = 3.0, position = position_dodge(width = 0.1), pch = 21, color = "black") +
+              geom_smooth(aes(color = OT), method = glm, se = FALSE, fullrange = FALSE, level = 0.95) +
+              xlab("Composite Sociality Index (CSI)") +
+              ylab("Lever Presses per Session") +
+              ylim(0, 65) +
+              xlim(0, 5) +
+              #facet_wrap(~subject) +
+              #facet_wrap(~ factor(group, 
+              #                    labels = c("(a) Griffin", "(b) Logan", "(c) Mason", "(d) Nkima")),
+              #                    ncol=2) +
+              labs(title = "Group 3 (n = 4)") +
+              geom_vline(xintercept = 1, linetype = "dashed", color = "black") +
+              theme_bw() +
+              scale_fill_manual(values = c("gray69", "blue2")) +
+              scale_color_manual(values = c("gray69", "blue2")) +
+              annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+              annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+              theme(panel.grid.major.x = element_blank(),
+                    panel.grid.minor.x = element_blank(),
+                    #axis.title = element_blank(),
+                    legend.position = "none",
+                    plot.title = element_text(hjust = 0.5),
+                    panel.grid.major.y = element_blank(),
+                    panel.grid.minor.y = element_blank())
+
+Mason_CSI <- ggplot(mason.visual, aes(x = csi, y = indiv_pull, fill = OT)) +
+              geom_point(size = 3.0, position = position_dodge(width = 0.1), pch = 21, color = "black") +
+              geom_smooth(aes(color = OT), method = glm, se = FALSE, fullrange = FALSE, level = 0.95) +
+              xlab("Composite Sociality Index (CSI)") +
+              ylab("Lever Presses per Session") +
+              ylim(0, 65) +
+              xlim(0, 5) +
+              #facet_wrap(~subject) +
+              #facet_wrap(~ factor(group, 
+              #                    labels = c("(a) Griffin", "(b) Logan", "(c) Mason", "(d) Nkima")),
+              #                    ncol=2) +
+              labs(title = "Group 4 (n = 8)") +
+              geom_vline(xintercept = 1, linetype = "dashed", color = "black") +
+              theme_bw() +
+              scale_fill_manual(values = c("gray69", "blue2")) +
+              scale_color_manual(values = c("gray69", "blue2")) +
+              annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+              annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+              theme(panel.grid.major.x = element_blank(),
+                    panel.grid.minor.x = element_blank(),
+                    #axis.title = element_blank(),
+                    legend.position = "none",
+                    plot.title = element_text(hjust = 0.5),
+                    panel.grid.major.y = element_blank(),
+                    panel.grid.minor.y = element_blank())
+
+
+yaxis <- textGrob("Lever Presses per Session", rot = 90, gp = gpar(fontsize = 20))
+bottom <- textGrob("Composite Sociality Index (CSI)", gp = gpar(fontsize = 20))
+
+
+g_csi<-grid.arrange(Logan_CSI, Griffin_CSI, Nkima_CSI, Mason_CSI, 
+                nrow = 2)
+
+#g<-grid.arrange(Logan_CSI, Griffin_CSI, Nkima_CSI, Mason_CSI, 
+#                nrow = 2, bottom = bottom, left = yaxis)
+
+ggsave("CSI_Graph_NEW.png", g_csi, height = 6, width = 10, units = "in")
+
+```
+
+```{r}
+Total_CSI <- ggplot(accessible.data.visual, aes(x = csi, y = indiv_pull, fill = OT)) +
+              geom_point(size = 3.0, position = position_dodge(width = 0.1), pch = 21, color = "black") +
+              geom_smooth(aes(color = OT), method = glm, se = FALSE, fullrange = FALSE, level = 0.95) +
+              xlab("Composite Sociality Index (CSI)") +
+              ylab("Lever Presses per Session") +
+              ylim(0, 65) +
+              xlim(0, 5) +
+              #facet_wrap(~subject) +
+              #facet_wrap(~ factor(group, 
+              #                    labels = c("(a) Griffin", "(b) Logan", "(c) Mason", "(d) Nkima")),
+              #                    ncol=2) +
+              labs(title = "All Groups (n = 23)") +
+              geom_vline(xintercept = 1, linetype = "dashed", color = "red", linewidth = 2) +
+              theme_bw() +
+              scale_fill_manual(values = c("gray69", "blue2")) +
+              scale_color_manual(values = c("gray69", "blue2")) +
+              annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+              annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+              theme(panel.grid.major.x = element_blank(),
+                    panel.grid.minor.x = element_blank(),
+                    plot.title = element_text(hjust = 0.5),
+                    panel.grid.major.y = element_blank(),
+                    panel.grid.minor.y = element_blank(),
+                    axis.title.x = element_text(size = 16),
+                    axis.title.y = element_text(size = 16),
+                    axis.text.x = element_text(size = 14),
+                    axis.text.y = element_text(size = 14),
+                    legend.position = c(0.90, 0.80),
+                    legend.title = element_blank(),
+                    legend.text = element_text(size = 12),
+                    legend.key.size = unit(1.0, "cm"))
+Total_CSI
+
+ggsave("CSI_Graph_No_Group.png", height = 5, width = 8, units = "in")
+```
+
+
+```{r Pulls by Rank Difference instead of Rank ELO Rating}
+griffin.visual.rank <- subset(accessible.data, group == "griffin")
+logan.visual.rank <- subset(accessible.data, group == "logan")
+mason.visual.rank <- subset(accessible.data, group == "mason")
+nkima.visual.rank <- subset(accessible.data, group == "nkima")
+
+logan_rank <- ggplot(logan.visual.rank, 
+                        aes(x = rank_diff, y = indiv_pull)) +
+                  geom_point(size = 3.0, pch = 21, color = "black", fill = "green4") +
+                  labs(title = "Group 1 (n = 6)", 
+                       x = "Rank Difference of Subject and Recipient", y = "Lever Presses per Session") +
+                  theme_bw() +
+                  ylim(0, 80) +
+                  xlim(-500, 500) +
+                  geom_vline(xintercept = 0, linetype = "dashed") +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_blank(),
+                        panel.grid.minor.y = element_blank(),
+                        axis.title.x = element_text(size = 16),
+                        axis.title.y = element_text(size = 16))
+
+griffin_rank <- ggplot(griffin.visual.rank, 
+                        aes(x = rank_diff, y = indiv_pull)) +
+                  geom_point(size = 3.0, pch = 21, color = "black", fill = "green4") +
+                  labs(title = "Group 2 (n = 5)", 
+                       x = "Rank Difference of Subject and Recipient", y = "Lever Presses per Session") +
+                  theme_bw() +
+                  ylim(0, 80) +
+                  xlim(-500, 500) +
+                  geom_vline(xintercept = 0, linetype = "dashed") +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_blank(),
+                        panel.grid.minor.y = element_blank(),
+                        axis.title.x = element_text(size = 16),
+                        axis.title.y = element_text(size = 16))
+
+nkima_rank <- ggplot(nkima.visual.rank, 
+                        aes(x = rank_diff, y = indiv_pull)) +
+                  geom_point(size = 3.0, pch = 21, color = "black", fill = "green4") +
+                  labs(title = "Group 3 (n = 4)", 
+                       x = "Rank Difference of Subject and Recipient", y = "Lever Presses per Session") +
+                  theme_bw() +
+                  ylim(0, 80) +
+                  xlim(-500, 500) +
+                  geom_vline(xintercept = 0, linetype = "dashed") +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_blank(),
+                        panel.grid.minor.y = element_blank(),
+                        axis.title.x = element_text(size = 16),
+                        axis.title.y = element_text(size = 16))
+
+mason_rank <- ggplot(mason.visual.rank, 
+                        aes(x = rank_diff, y = indiv_pull)) +
+                  geom_point(size = 3.0, pch = 21, color = "black", fill = "green4") +
+                  labs(title = "Group 4 (n = 8)", 
+                       x = "Rank Difference of Subject and Recipient", y = "Lever Presses per Session") +
+                  theme_bw() +
+                  ylim(0, 80) +
+                  xlim(-500, 500) +
+                  geom_vline(xintercept = 0, linetype = "dashed") +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_blank(),
+                        panel.grid.minor.y = element_blank(),
+                        axis.title.x = element_text(size = 16),
+                        axis.title.y = element_text(size = 16))
+
+
+g_rankdiff<-grid.arrange(logan_rank, griffin_rank, nkima_rank, mason_rank, 
+                nrow = 2)
+
+ggsave("Rank_Diff_Graph_NEW.png", g_rankdiff, height = 7, width = 10, units = "in")
+```
+```{r}
+
+rank_total_graph <- ggplot(accessible.data, 
+                        aes(x = rank_diff, y = indiv_pull)) +
+                  geom_point(size = 3.0, pch = 21, color = "black", fill = "green4") +
+                  labs(title = "All Groups (n = 23)", 
+                       x = "Rank Difference of Subject and Recipient", y = "Lever Presses per Session") +
+                  theme_bw() +
+                  ylim(0, 80) +
+                  xlim(-500, 500) +
+                  geom_vline(xintercept = 0, linetype = "dashed", color = "red", linewidth = 2) +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(panel.grid.major.x = element_blank(),
+                    panel.grid.minor.x = element_blank(),
+                    plot.title = element_text(hjust = 0.5),
+                    panel.grid.major.y = element_blank(),
+                    panel.grid.minor.y = element_blank(),
+                    axis.title.x = element_text(size = 16),
+                    axis.title.y = element_text(size = 16),
+                    axis.text.x = element_text(size = 14),
+                    axis.text.y = element_text(size = 14),
+                    legend.position = c(0.90, 0.80),
+                    legend.title = element_blank(),
+                    legend.text = element_text(size = 12),
+                    legend.key.size = unit(1.0, "cm"))
+
+rank_total_graph
+
+ggsave("Rank_Graph_No_Group.png", height = 5, width = 8, units = "in")
+
+
+```
+
+
+
+```{r Check for Overdispersion}
+# Overdispersino occurs when the VAriance of your DV is >>> Mean of your DV
+var(accessible.data$indiv_pull)
+mean(accessible.data$indiv_pull)
+
+# Variance Ratio
+var(accessible.data$indiv_pull)/mean(accessible.data$indiv_pull)
+# Over dispersion = PRESENT!
+
+```
+Mean: 1.2
+Variance: 23.9
+Variance Ratio: 20.1
+
+ OVERDISPERSION means we need Negative Binomial or Quasi-Poisson
+
+```{r Correlation between CSI and Rank Difference}
+# Correlation between CSI and Rank
+accessible.data$rank_diff_abs <- abs(accessible.data$rank_diff)
+
+ggplot(accessible.data, aes(x = rank_diff_abs, y = csi)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  theme_classic()
+
+cor.test(accessible.data$csi, accessible.data$rank_diff_abs, method = "pearson")
+```
+
+A Pearson correlation coefficient was computed to assess the linear relationship between CSI and Rank Difference. There was a significant negative correlation between the two variables, r(3538) = -0.422, p < 0.001. We were more interested in the differences associated with social closeness and therefore, we removed rank difference from the model.
+
+```{r Check relations between CSI and Relatedness}
+
+ggplot(accessible.data, aes(x = factor(related), y = csi)) +
+  geom_point() +
+  geom_abline(fullrange = FALSE) +
+  theme_classic()
+
+cor.test(accessible.data$csi, as.numeric(accessible.data$related), method = "pearson")
+```
+Using a Point-Biserial correlation, we determined that there was a significant positive correlation between CSI and relatedness such that related individuals were also socially closer r[PM](3538) = 0.373, p < 0.001.
+
+```{r Test for Colinearity with VIF}
+# Z-Center Numeric Predcitors
+accessible.data$z.csi = as.vector(scale(accessible.data$csi))
+accessible.data$z.session_number = as.vector(scale(accessible.data$session_number))
+accessible.data$z.rank_diff_abs = as.vector(scale(accessible.data$rank_diff_abs))
+hist(accessible.data$z.csi)
+
+simple_model2 <- lm(as.numeric(indiv_pull) ~ OT + z.csi + z.session_number, data = accessible.data)
+
+summary(simple_model2)
+
+vif(simple_model2)
+
+# ALL VIFs should be low, around 1.0 preferably; Above 2.5 is concerning
+```
+
+```{r Model 2: ZINB What factors influence prosocial pulls?}
+# Negative Binomial Regression
+ZINB_2 <- glmmTMB(indiv_pull ~ OT*csi  + 
+                    #OT*related + OT*z.rank_diff_abs +
+                    (1|subject) + (1|recipient),
+                zi = ~1,
+                family = nbinom2, data = accessible.data)
+
+summary(ZINB_2)
+
+Anova(ZINB_2, type = 3)
+
+tab_model(ZINB_2,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "ZINB Regression Predicting the Number of Prosocial Lever Pulls")
+```
+
+
+```{r Model 2: QuasiPoisson What factors influence prosocial pulls?}
+# Quasi-Poisson Regression
+QUASI2 <- glmmTMB(indiv_pull ~ OT*z.csi  +
+                    (1|subject) + (1|recipient),
+                zi = ~1,
+                family = nbinom1, data = accessible.data)
+
+summary(QUASI2)
+
+Anova(QUASI2, type = 3)
+
+tab_model(QUASI2,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Prosocial Lever Pulls")
+
+anova(ZINB_2, QUASI2, test = "chisq")
+# Quasi-Poisson was a better model with AIC = 4591.1 compared to AIC = 4839.8 
+# Chi Sq value = 248.66 p<0.001
+
+
+
+```
+
+```{r Re-Run Model 2 with Runs Removed}
+
+accessible.data$pull_minus_run <- (accessible.data$indiv_pull - accessible.data$indiv_run)
+
+# Quasi-Poisson Regression
+QUASI_NoRuns <- glmmTMB(pull_minus_run ~ OT*z.csi +
+                    (1|subject) + (1|recipient),
+                zi = ~1,
+                family = nbinom1, data = accessible.data)
+
+summary(QUASI_NoRuns)
+
+Anova(QUASI_NoRuns, type = 3)
+
+tab_model(QUASI_NoRuns,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "Quassi Poisson Regression Predicting the Number of Prosocial Lever Pulls w/o runs")
+
+anova(QUASI_NoRuns, QUASI2, test = "chisq")
+```
+
+```{r}
+QUASI2_RANK <- glmmTMB(indiv_pull ~ OT*z.rank_diff_abs +
+                    (1|subject) + (1|recipient),
+                zi = ~1,
+                family = nbinom1, data = accessible.data)
+
+summary(QUASI2_RANK)
+
+Anova(QUASI2_RANK, type = 3)
+
+tab_model(QUASI2_RANK,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Prosocial Lever Pulls")
+
+anova(QUASI2_RANK, QUASI2, test = "chisq")
+```
+
+```{r Re-run the Model 2 but include rank (despite colinearity)}
+# Quasi-Poisson Regression
+QUASI_withRank <- glmmTMB(indiv_pull ~ OT*z.csi + 
+                            OT*z.rank_diff_abs + 
+                            z.rank_diff_abs*z.csi +
+                    (1|subject) + (1|recipient),
+                zi = ~1,
+                family = nbinom1, data = accessible.data)
+
+summary(QUASI_withRank)
+
+Anova(QUASI_withRank, type = 3)
+
+tab_model(QUASI_withRank,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoiss Regression Predicting the Number of Prosocial Lever Pulls")
+
+anova(QUASI_withRank, QUASI2, test = "chisq")
+
+```
+
+
+
+```{r Compare to a Random Effects only Model}
+random_effects_only <- glmmTMB(indiv_pull ~ (1|subject) + (1|recipient),
+               zi = ~1,
+               family = nbinom1, data = accessible.data)
+
+summary(random_effects_only)
+
+anova(QUASI2, random_effects_only, test = "chisq")
+
+##
+
+random_effects_only_no_run <- glmmTMB(pull_minus_run ~ (1|subject) + (1|recipient),
+               zi = ~1,
+               family = nbinom1, data = accessible.data)
+
+summary(random_effects_only_no_run)
+
+anova(random_effects_only_no_run, QUASI_NoRuns, test = "chisq")
+```

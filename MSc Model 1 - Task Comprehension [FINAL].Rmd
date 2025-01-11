@@ -1,0 +1,1065 @@
+---
+title: "Group Prosociality with OT"
+output: word_document
+date: "2022-09-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Install your Packages}
+#install.packages("rstudioapi")
+#install.packages("openxlsx")
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("tidyverse")
+#install.packages("pscl")
+#install.packages("multcomp")
+#install.packages("lsmeans")
+#install.packages("fitdistrplus")
+#install.packages("glmmTMB")
+#install.packages("overdisp")
+#install.packages("sjPlot")
+#install.packages("Rmisc")
+#install.packages("rstatix")
+#install.packages("MASS")
+#install.packages("ggsignif")
+```
+
+```{r Library your Packages}
+library(rstudioapi)
+library(openxlsx)
+library(readxl)
+library(dplyr)
+library(plyr)
+library(tidyr)
+library(tidyverse)
+library(pscl)
+library(MASS)
+library(multcomp)
+library(emmeans)
+library(lsmeans)
+library(fitdistrplus)
+library(lme4)
+library(car)
+library(glmmTMB)
+library(emmeans)
+library(overdisp)
+library(sjPlot)
+library(Rmisc)
+library(rstatix)
+library(ggsignif)
+library(grid)
+library(gridExtra)
+```
+
+
+```{r Read in your Data Files}
+model1.data <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Model_1_Data_Frame.xlsx")
+runs_per_session <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Model_1_Runs_per_Session.xlsx")
+demographics <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Monkey_Demographics2.xlsx")
+
+merged.data <- merge(x = demographics, y = runs_per_session, by.x = "subject", by.y = "subject")
+nrow(merged.data) == nrow(merged.data)
+head(merged.data)
+runs_per_session <- merged.data
+rm(merged.data)
+```
+
+```{r Clean the Data Frames}
+
+model1.data$subject <- as.factor(model1.data$subject)
+model1.data$block <- as.numeric(model1.data$block)
+model1.data$date <- as.Date(model1.data$date, format = "%m/%d/%Y", optional = TRUE)
+model1.data$session_number <- as.numeric(model1.data$session_number)
+model1.data$session_type <- as.factor(model1.data$session_type)
+model1.data$OT <- as.factor(model1.data$OT)
+model1.data$training <- as.factor(model1.data$training)
+model1.data$sex <- as.factor(model1.data$sex)
+model1.data$rank <- as.numeric(model1.data$rank)
+model1.data$group <- as.factor(model1.data$group)
+model1.data$pull_type <- as.factor(model1.data$pull_type)
+model1.data$number_of_pulls <- as.numeric(model1.data$number_of_pulls)
+model1.data$pull_type <- as.character(model1.data$pull_type)
+model1.data$pull_type[model1.data$pull_type == 'prosocial'] <- 'with recipient'
+model1.data$pull_type[model1.data$pull_type == 'nonprosocial'] <- 'no recipient'
+model1.data$pull_type <- as.factor(model1.data$pull_type)
+model1.data$rank_score <- as.numeric(model1.data$rank_score)
+levels(model1.data$pull_type)
+model1.data$rank_order <- as.factor(model1.data$rank_order)
+model1.data$rank_cat <- as.factor(model1.data$rank_cat)
+model1.data$rank_grouping <- as.factor(model1.data$rank_grouping)
+
+levels(model1.data$subject)
+class(model1.data$date)
+levels(model1.data$session_type)
+levels(model1.data$OT)
+levels(model1.data$training)
+levels(model1.data$pull_type)
+summary(model1.data$number_of_pulls)
+
+
+```
+
+Quasi-Poisson assumes the variance increases linearly with the mean (y = Theta * X)
+Negative Binomial assumes the variance increases quadratically with the mean (y = x^2)
+
+Because the blue linear line seems to fit well, we can guess it would be a quasi poisson, but we will run both and compare.
+
+```{r Only look at Total Pulls for this Model}
+# We only care about the total pulls because we are looking at different sessions
+model.data <- subset(model1.data, pull_type == "total")
+```
+
+```{r Compare the Average Number of Lever Presses in Experimental Sessions to Inaccessible Controls for each individual}
+pull_df <- subset(model.data, select = c("subject", "session_number", "session_type", "number_of_pulls", "OT", "rank_grouping"))
+
+run_df <- subset(runs_per_session, select = c("subject", "session_number", "total_run"))
+
+df <- merge(pull_df, run_df, by = c("subject", "session_number"), all.x = TRUE)
+
+# Step 1: Calculate average pulls per session type for each subject
+detach("package:Rmisc")
+detach("package:plyr")
+
+average_pulls <- df %>%
+  group_by(subject, session_type) %>%
+  summarize(avg_pulls = mean(number_of_pulls), .groups = "drop")
+
+# Step 2: Split data for Accessible and Inaccessible sessions
+accessible_pulls <- average_pulls %>% filter(session_type == "Accessible")
+inaccessible_pulls <- average_pulls %>% filter(session_type == "Inaccessible")
+
+# Step 3: Run a t-test for each subject to compare Accessible vs Inaccessible average pulls
+t_test_w_runs <- average_pulls %>%
+  group_by(subject) %>%
+  do(tidy(t.test(
+    number_of_pulls ~ session_type, 
+    data = filter(df, subject == unique(.$subject) & session_type %in% c("Accessible", "Inaccessible"))
+  )))
+
+# Step 4: View the results, including t-statistics and p-values for each subject
+t_test_w_runs <- t_test_w_runs %>%
+  select(subject, estimate1 = estimate1, estimate2 = estimate2, statistic, p.value)
+
+t_test_w_runs
+```
+
+```{r Repeat again the previous step again, but remove the runs}
+
+df[is.na(df)] <- 0
+
+df$pulls_minus_runs <- (df$number_of_pulls - df$total_run)
+
+# Step 1: Calculate average pulls_minus_runs per session type for each subject
+average_pulls_minus_runs <- df %>%
+  group_by(subject, session_type) %>%
+  summarize(avg_pulls_minus_runs = mean(pulls_minus_runs), .groups = "drop")
+
+# Step 2: Split data for Accessible and Inaccessible sessions
+accessible_pulls_minus_runs <- average_pulls_minus_runs %>% filter(session_type == "Accessible")
+inaccessible_pulls_minus_runs <- average_pulls_minus_runs %>% filter(session_type == "Inaccessible")
+
+# Step 3: Run a t-test for each subject to compare Accessible vs Inaccessible for avg_pulls_minus_runs
+t_test_no_runs <- df %>%
+  group_by(subject) %>%
+  do(tidy(t.test(
+    pulls_minus_runs ~ session_type, 
+    data = filter(df, subject == unique(.$subject) & session_type %in% c("Accessible", "Inaccessible"))
+  )))
+
+# Step 4: View the results, including t-statistics and p-values for each subject for avg_pulls_minus_runs
+t_test_no_runs <- t_test_no_runs %>%
+  select(subject, estimate1, estimate2, statistic, p.value)
+
+# Display the results
+t_test_no_runs
+
+library(plyr)
+library(Rmisc)
+rm(pull_df, run_df, df, average_pulls_minus_runs, accessible_pulls_minus_runs, inaccessible_pulls_minus_runs, accessible_pulls, inaccessible_pulls, average_pulls)
+```
+According to related-samples t-tests, the following individuals pressed the lever significantly more in the Experimental sessions than in Inaccessible Controls:
+(n = 8)
+Beeker, Lily, Nala, Mason, Scarlet, Griffin, Nkima, and Ira
+
+When runs were removed, the following individuals still pressed the lever signficantly more in the Experimental sessions than in Inaccessible Controls:
+(n = 5)
+Beeker, Mason, Scarlet, Griffin, Ira
+
+```{r Check for Correlations between Factors}
+cor.test(as.numeric(model.data$OT), model.data$rank, method = "pearson")
+# Looks like higher ranking monkeys were more likely to have OT, which is not surprising
+cor.test(as.numeric(model.data$training), model.data$rank, method = "pearson")
+# Although significant, there is no correlation between (r = -0.08) between rank and training
+cor.test(as.numeric(model.data$OT), as.numeric(model.data$training), method = "pearson")
+# Monkeys that passed training were more likely to fur-rub, and this once again makes sense
+
+```
+Overall, nothing out of the ordinary with the independent variables.
+
+```{r z-Center Session Number and Rank}
+# Center your numeric predictors
+model.data$z.session_number = as.vector(scale(model.data$session_number))
+model.data$z.rank = as.vector(scale(model.data$rank))
+model.data$rank_cat <- as.factor(model.data$rank_cat)
+model.data$rank_grouping <- as.factor(model.data$rank_grouping)
+
+# Z centered, with a mean of 0 and a SD of 1
+mean(model.data$z.rank)
+sd(model.data$z.rank)
+```
+
+
+```{r Check for Collinearity using Variance Inflation Factor (VIF)}
+# Session Level Data
+simple_model1 <- lm(as.numeric(number_of_pulls) ~ OT + session_type + training + rank_score + session_number, data = model.data)
+
+summary(simple_model1)
+
+vif(simple_model1)
+
+# ALL VIFs should be low, around 1.0 preferably Above 2.5 is concerning
+```
+
+```{r Check for Overdispersion}
+# An assumption of Poisson Regression is that the Mean and Variance are approximately EQUAL
+
+# Total Pulls
+mean(model.data$number_of_pulls)
+var(model.data$number_of_pulls)
+
+# variance Ratio
+var(model.data$number_of_pulls)/mean(model.data$number_of_pulls)
+
+# If the variance is greater than the mean, you have overdispersion and cannot use Poisson
+# If the variance is less than the mean, you have underdispersion
+```
+
+```{r Check the Goodness of Fit to a Poisson and Negative Binomial}
+# These goodness of fit tests are more of a guideline. You want to check the Chi-squared p-value at the top of each output. If it is < 0.05 then it doesn't fit that distribution that well. If they don't fit, its okay. Its likely because you are working with very zero inflated data.
+
+# Because your data is overdispersed, a zero inflated negative binomial is going to be the best bet. Here you can see the none of the data fits a Poisson, but most of it fits negative binomial.
+
+# Entire  Model 
+# Poisson
+fit <- fitdist(model1.data[model1.data$pull_type == "total",]$number_of_pulls, "pois", discrete = TRUE)
+gofstat(fit)
+# Negative Binomial
+fit <- fitdist(model1.data[model1.data$pull_type == "total",]$number_of_pulls, "nbinom", discrete = TRUE)
+gofstat(fit)
+
+# Total pulls without OT -----
+# Poisson
+fit <- fitdist(model1.data[model1.data$OT == 0 & model1.data$pull_type == "total",]$number_of_pulls, "pois", discrete = TRUE)
+gofstat(fit)
+# Negative Binomial
+fit <- fitdist(model1.data[model1.data$OT == 0 & model1.data$pull_type == "total",]$number_of_pulls, "nbinom", discrete = TRUE)
+gofstat(fit)
+
+# Total pulls with OT -----
+# Poisson
+fit <- fitdist(model1.data[model1.data$OT == 1 & model1.data$pull_type == "total",]$number_of_pulls, "pois", discrete = TRUE)
+gofstat(fit)
+# Negative Binomial
+fit <- fitdist(model1.data[model1.data$OT == 1 & model1.data$pull_type == "total",]$number_of_pulls, "nbinom", discrete = TRUE)
+gofstat(fit)
+
+```
+
+```{r Make a data frame that has the runs removed}
+runs_per_session_cut <- subset(runs_per_session, select = c("subject", "session_number", "total_run"))
+
+model.data.exp <- subset(model.data, session_type == "Accessible")
+model.data.contr <- subset(model.data, session_type == "Inaccessible" | session_type == "Selfish")
+
+model.data.with.runs <- merge(x = model.data.exp, y = runs_per_session_cut, by = c("subject", "session_number"))
+model.data.contr$total_run <- 0
+
+model.data.no.run <- rbind(model.data.with.runs, model.data.contr)
+
+# Make sure there is no negative numbers
+model.data.no.run$num_pulls_runs_removed <- (model.data.no.run$number_of_pulls - model.data.no.run$total_run)
+
+table(model.data.no.run$session_type)
+```
+
+```{r Run the Models}
+# Rank as a proportion outranked, 1.00 = highest 0.00 = lowest
+QUASI_1 <- glmmTMB(number_of_pulls ~ session_type*OT + rank_score*session_type + training + session_number + (1|subject),
+                ziformula = ~1,
+                family = nbinom1, data = model.data)
+
+QUASI_NO_RUN <- glmmTMB(num_pulls_runs_removed ~ session_type*OT + rank_score*session_type+ training + session_number + (1|subject),
+                ziformula = ~1,
+                family = nbinom1, data = model.data.no.run)
+
+ZINB_1 <- glmmTMB(number_of_pulls ~ session_type*OT + rank_score*session_type + training + session_number + (1|subject),
+                ziformula = ~1,
+                family = nbinom2, data = model.data)
+
+random_effects_only <- glmmTMB(number_of_pulls ~ (1|subject),
+               zi = ~1,
+               family = nbinom1, data = model.data)
+
+```
+
+```{r Run the Models}
+summary(QUASI_1)
+
+Anova(QUASI_1, type = 3)
+
+tab_model(QUASI_1,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls")
+```
+
+
+```{r Run the Models}
+summary(QUASI_NO_RUN)
+
+Anova(QUASI_NO_RUN, type = 3)
+
+tab_model(QUASI_NO_RUN,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls with Runs Removed")
+```
+
+
+```{r Run the Models}
+summary(ZINB_1)
+
+Anova(ZINB_1, type = 3)
+
+tab_model(ZINB_1,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls with Runs Removed")
+```
+
+```{r Compare ZIP to Random Effects Only Model}
+anova(random_effects_only, QUASI_1, test = "chisq")
+```
+
+```{r Compare ZIP to ZINB Model}
+anova(QUASI_1, ZINB_1, test = "chisq")
+```
+
+
+```{r Post-Hoc Exploratory Analysis - Check the Effect of OT independent of Rank}
+QUASI_OT <- glmmTMB(number_of_pulls ~ session_type*OT + (1|subject),
+                ziformula = ~1,
+                family = nbinom1, data = model.data)
+summary(QUASI_OT)
+Anova(QUASI_OT, type = 3)
+
+tab_model(QUASI_OT,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls")
+
+interaction.plot(x.factor = model.data$session_type, 
+                 trace.factor = model.data$OT, 
+                 response = model.data$number_of_pulls,  # Specify your response variable here
+                 type = "b", 
+                 fixed = FALSE, 
+                 legend = TRUE)
+```
+
+```{r Probe the Interactions - EMTRENDS}
+# EMTRENDS FIRST
+# The first output will tell you the estimated slopes for "rank_score", so in your example:
+# Experimental = 3.51 means for every 1 unit increase in rank, there is a 3.51 unit increase in lever presses in the experimental sessions
+  # The LCL and UCL are the lower and upper 95% CI values for this slope. So it is 3.51 (1.85 - 5.17)
+# Inaccessible = 1.75 means for every 1 unit increase in rank, there is a 1.75 unit increase in lever presses in the Inaccessible sessions
+
+# The next output will tell you whether the slopes of rank are significantly different from one another
+# Exp - Inacc: Estimate = 1.76 which yields a p-value of 0.0001 indicating that the slope for monkey rank in the experimental sessions was significantly different than the slope for monkey rank in the Inaccessible sessions
+
+emtrends(QUASI_1, pairwise ~ session_type, var = "rank_score", adjust = "bonferroni")
+emtrends(QUASI_NO_RUN, pairwise ~ session_type, var = "rank_score", adjust = "bonferroni")
+
+```
+
+```{r Since you are going to visualize by category, we need to rerun the model with this to obtain significance values for the graph}
+# Rank as a grouping variable, grouping alpha males, alpha females, etc.
+model.data$rank_grouping <- ifelse(model.data$subject == "Paddy", 4, model.data$rank_grouping)
+model.data.no.run$rank_grouping <- ifelse(model.data.no.run$subject == "Paddy", 4, model.data.no.run$rank_grouping)
+
+model.data$rank_grouping <- as.factor(model.data$rank_grouping)
+model.data.no.run$rank_grouping <- as.factor(model.data.no.run$rank_grouping)
+
+
+QUASI_GRP <- glmmTMB(number_of_pulls ~ session_type*OT + rank_grouping*session_type + training + session_number + (1|subject),
+                ziformula = ~1,
+                family = nbinom1, data = model.data)
+
+
+
+QUASI_GRP_NO_RUN <- glmmTMB(num_pulls_runs_removed ~ session_type*OT + rank_grouping*session_type 
+                        + training + session_number + (1|subject),
+                ziformula = ~1,
+                family = nbinom1, data = model.data.no.run)
+
+Anova(QUASI_GRP, type = 3)
+Anova(QUASI_GRP_NO_RUN, type = 3)
+```
+
+
+```{r Now run the contrasts to extract the EMMs for each interaction}
+# RUNS INCLUDED --------------------------------------------------------------------------------------------------------------
+
+# Extract the estimated marginal means for the interaction
+rm(emmeans_obj)
+emmeans_obj <- emmeans(QUASI_GRP, ~ session_type | rank_grouping)
+# Initialize an empty list to store contrast results
+rm(contrast_results)
+contrast_results <- list()
+
+# Loop through each level of rank_grouping
+for (i in 1:4) {  # Assuming rank_grouping levels are 1, 2, 3, 4
+  # Subset emmeans_obj to include only the current level of rank_grouping
+  emmeans_level <- subset(emmeans_obj, rank_grouping == i)
+  
+  # Compute pairwise comparisons within the current level of rank_grouping
+  contrasts <- contrast(emmeans_level, method = "pairwise", by = NULL,
+                        at = list(session_type = c("Accessible", "Inaccessible", "Selfish")),
+                        adjust = "bonferroni")
+  
+  # Store the contrast results in the list, using the rank_grouping level as a tag
+  contrast_results[[paste("Rank", i)]] <- contrasts
+}
+
+
+
+for (key in names(contrast_results)) {
+  cat("Contrasts for", key, ":\n")
+  print(summary(contrast_results[[key]]))
+  cat("\n")
+}
+
+# RUNS EXCLUDED ---------------------------------------------------------------------------------------------------------------------------
+
+rm(emmeans_obj_no_runs)
+emmeans_obj_no_runs <- emmeans(QUASI_GRP_NO_RUN, ~ session_type | rank_grouping)
+rm(contrast_results_no_runs)
+contrast_results_no_runs <- list()
+
+for (i in 1:4) {
+  emmeans_level <- subset(emmeans_obj_no_runs, rank_grouping == i)
+  
+  contrasts <- contrast(emmeans_level, method = "pairwise", by = NULL,
+                        at = list(session_type = c("Accessible", "Inaccessible", "Selfish")),
+                        adjust = "bonferroni")
+  
+  # Store the contrast results in the list, using the rank_grouping level as a tag
+  contrast_results_no_runs[[paste("Rank", i)]] <- contrasts
+}
+
+for (key in names(contrast_results_no_runs)) {
+  cat("Contrasts for", key, ":\n")
+  print(summary(contrast_results_no_runs[[key]]))
+  cat("\n")
+}
+
+
+```
+
+
+```{r Fix and Check Rank Categories. 4 AM, 4 AF, 4 BF, 11 Sub}
+# section rank off by Alphas, Betas, and Lowest
+model.data <- model.data.no.run
+model1.data$rank_grouping <- ifelse(model1.data$subject == "Paddy", 4, model1.data$rank_grouping)
+
+# Make sure they are correctly grouped by alpha males, alpha females, beta females, and others
+table(model.data$subject, model.data$rank_grouping)
+model.data$rank_category <- model.data$rank_grouping
+table(model1.data$subject, model1.data$rank_grouping)
+model1.data$rank_category <- model1.data$rank_grouping
+table(runs_per_session$subject, runs_per_session$rank_grouping)
+runs_per_session$rank_category <- runs_per_session$rank_grouping
+
+```
+
+
+```{r Create Data Frames for Visualization of Rank x Session Type Interaction}
+model.data$rank_category <- as.factor(model.data$rank_category)
+
+model.data$session_type <- factor(model.data$session_type, levels = c("Accessible", "Inaccessible", "Selfish"))
+levels(model.data$session_type) <- c("Experimental", "Inaccessible", "Selfish")
+
+
+rank_by_session_df <- summarySE(model.data, measurevar="number_of_pulls", groupvars=c("rank_category", "session_type"))
+
+runs_by_session_df <- summarySE(runs_per_session, measurevar = "total_run", groupvars=c("rank_category"))
+
+runs_by_session_df$session_type <- "exp_w_runs"
+names(runs_by_session_df)[3] <- "number_of_pulls"
+
+runs_by_session_df <- runs_by_session_df[, c("rank_category", "session_type", "N", "number_of_pulls", "sd", "se", "ci")]
+
+runs_by_session_df <- rbind(runs_by_session_df, subset(rank_by_session_df, session_type == "Experimental"))
+
+# 4 categories
+runs_by_session_df[1, 4] <- (runs_by_session_df[5, 4] - runs_by_session_df[1, 4])
+runs_by_session_df[2, 4] <- (runs_by_session_df[6, 4] - runs_by_session_df[2, 4])
+runs_by_session_df[3, 4] <- (runs_by_session_df[7, 4] - runs_by_session_df[3, 4])
+runs_by_session_df[4, 4] <- (runs_by_session_df[8, 4] - runs_by_session_df[4, 4])
+
+# 3 categories
+#runs_by_session_df[1, 4] <- (runs_by_session_df[4, 4] - runs_by_session_df[1, 4])
+#runs_by_session_df[2, 4] <- (runs_by_session_df[5, 4] - runs_by_session_df[2, 4])
+#runs_by_session_df[3, 4] <- (runs_by_session_df[6, 4] - runs_by_session_df[3, 4])
+
+runs_by_session_df <- subset(runs_by_session_df, session_type == "exp_w_runs")
+
+rank_by_session_df <- rbind(rank_by_session_df, runs_by_session_df)
+
+
+levels(rank_by_session_df$session_type) <- c("Experimental", "Inaccessible", "Selfish", "Runs")
+
+rank_by_session_df$session_type <- factor(rank_by_session_df$session_type, 
+                                          levels = c("Experimental", "Runs", "Inaccessible", "Selfish"))
+
+rbs_exp <- subset(rank_by_session_df, session_type == "Experimental" | session_type == "Runs")
+rbs_cont <- subset(rank_by_session_df, session_type == "Inaccessible" | session_type == "Selfish")
+```
+
+
+```{r Probe Significant interactions}
+rank_by_session_df$session_type <- factor(rank_by_session_df$session_type, levels = c("Experimental","Runs","Inaccessible","Selfish"))
+rank_by_session_df$rank_category <- factor(rank_by_session_df$rank_category, 
+                                           levels = 1:4, labels = c("Alpha Males","Alpha Females","Beta Females","All Others"))
+rank_by_session_df$runs <- ifelse(rank_by_session_df$session_type == "Runs", 1, 0)
+rank_by_session_df$session_type[rank_by_session_df$session_type == "Runs"] <- "Experimental"
+
+rbs_exp$session_type <- factor(rbs_exp$session_type, levels=c("Experimental","Runs"))
+rbs_cont$session_type <- factor(rbs_cont$session_type, levels=c("Inaccessible","Selfish"))
+
+
+rank_by_session_graph <- ggplot(rank_by_session_df, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(runs))) +
+                    geom_bar(stat = "identity", alpha = 0.7, position = position_dodge()) +
+                    geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                    labs(x = "Session Type", y = "Average Number of Pulls per Session") +
+                    scale_y_continuous(breaks=seq(0,70,10)) +
+                    scale_fill_manual(values= c("darkgreen", "green3"), 
+                                       name = "", labels = c("All Presses", "Presses with Runs Removed")) +
+                    facet_wrap(~rank_category) +
+                    theme_bw()
+
+rank_by_session_graph
+```
+
+
+```{r Probe Significant interactions}
+rank_by_session_df$rank_category <- factor(rank_by_session_df$rank_category, 
+                                           levels = c("Alpha Males","Alpha Females","Beta Females","All Others"), labels = 1:4)
+
+low_df <- subset(rank_by_session_df, rank_category == 4)
+beta_df <- subset(rank_by_session_df, rank_category == 3)
+alphaF_df <- subset(rank_by_session_df, rank_category == 2)
+alphaM_df <-subset(rank_by_session_df, rank_category == 1)
+
+# 7586 Total Lever Presses across all session types
+# Alpha Males 3554 lever presses (46.8%)
+sum(subset(model.data, rank_category == 1)$number_of_pulls)
+
+# Alpha Females 678 lever presses (8.9%)
+sum(subset(model.data, rank_category == 2)$number_of_pulls)
+
+# Beta Females 2592 lever presses (34.2%)
+sum(subset(model.data, rank_category == 3)$number_of_pulls)
+
+# Alpha Males 762 lever presses (10.0%)
+sum(subset(model.data, rank_category == 4)$number_of_pulls)
+```
+
+
+```{r Probe Significant interactions}
+low_ranking_graph <-ggplot(low_df, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(runs))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "All Other Subordinates (n = 11)\n762 Lever Presses (10.0% of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,70,10)) +
+                    scale_fill_manual(values= c("darkgreen", "green3"), 
+                                      name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "N.S.", y_position = 30, textsize = 4, tip_length = 0.20) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), 
+                                annotations = "**", y_position = 60, textsize = 8, tip_length = 0.20) +
+                    ylim(0, 65) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+low_ranking_graph
+
+beta_female_graph <- ggplot(beta_df, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(runs))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "Beta Females (n = 4)\n2592 Lever Presses (34.2 % of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,70,10)) +
+                    scale_fill_manual(values= c("darkgreen", "green3"), 
+                                       name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
+                    ylim(0, 65) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "***", y_position = 28, textsize = 8) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "***", y_position = 58, textsize = 8) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+beta_female_graph
+# N.S. for runs removed
+
+alpha_female_graph <- ggplot(alphaF_df, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(runs))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "Alpha Females (n = 4)\n678 Lever Presses (8.9 % of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,70,10)) +
+                    scale_fill_manual(values= c("darkgreen", "green3"), 
+                                       name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
+                    ylim(0, 65) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "N.S.", y_position = 30, textsize = 4, tip_length = 0.09) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "**", y_position = 60, textsize = 8, tip_length = 0.09) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+alpha_female_graph
+
+alpha_male_graph <- ggplot(alphaM_df, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(runs))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "Alpha Males (n = 4)\n3554 Lever Presses (46.8 % of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,60,10)) +
+                    scale_fill_manual(values= c("darkgreen", "green3"), 
+                                       name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
+                    ylim(0, 65) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "***", y_position = 28, textsize = 8) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "***", y_position = 58, textsize = 8) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+alpha_male_graph
+# p = 0.0205 for runs removed
+```
+
+
+```{r Save the Final Figure 2 Graph}
+g_rank<-grid.arrange(alpha_male_graph, alpha_female_graph, beta_female_graph, low_ranking_graph, 
+                nrow = 2)
+ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/Figure_2.png", g_rank, height = 10, width = 10, units = "in")
+
+```
+
+
+
+```{r Figure S1 - Lever Presses as a function of Elo Rank}
+griffin.visual <- subset(model.data, group == "griffin")
+logan.visual <- subset(model.data, group == "logan")
+mason.visual <- subset(model.data, group == "mason")
+nkima.visual <- subset(model.data, group == "nkima")
+
+logan_rank <- ggplot(logan.visual, 
+                        aes(x = rank, y = number_of_pulls)) +
+                  geom_point(size = 3.0, pch = 21, color = "grey2", fill = "green4") +
+                  geom_smooth(color = "black", method = glm, se=FALSE, fullrange=FALSE, level = 0.95) +
+                  labs(title = "Group 1 (n = 6)", 
+                       x = "Rank (Elo Rating)", y = "Lever Presses per Session") +
+                  xlim(1200, 1900) +
+                  ylim(0, 110) +
+                  theme_bw() +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                        #axis.title = element_blank(),
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_line( size=.1, color="grey"),
+                       panel.grid.minor.y = element_blank())
+
+
+griffin_rank <- ggplot(griffin.visual, 
+                        aes(x = rank, y = number_of_pulls)) +
+                  geom_point(size = 3.0, pch = 21, color = "grey2", fill = "green4") +
+                  geom_smooth(color = "black", method = glm, se=FALSE, fullrange=FALSE, level = 0.95) +
+                  labs(title = "Group 2 (n = 5)", 
+                       x = "Rank (Elo Rating)", y = "Lever Presses per Session") +
+                  xlim(1200, 1900) +
+                  ylim(0, 110) +
+                  theme_bw() +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                      #  axis.title = element_blank(),
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_line( size=.1, color="grey"),
+                       panel.grid.minor.y = element_blank())
+
+nkima_rank <- ggplot(nkima.visual, 
+                        aes(x = rank, y = number_of_pulls)) +
+                  geom_point(size = 3.0, pch = 21, color = "grey2", fill = "green4") +
+                  geom_smooth(color = "black", method = glm, se=FALSE, fullrange=FALSE, level = 0.95) +
+                  labs(title = "Group 3 (n = 4)", 
+                       x = "Rank (Elo Rating)", y = "Lever Presses per Session") +
+                  xlim(1200, 1900) +
+                  ylim(0, 110) +
+                  theme_bw() +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                      #  axis.title = element_blank(),
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_line( size=.1, color="grey"),
+                       panel.grid.minor.y = element_blank())
+
+mason_rank <- ggplot(mason.visual, 
+                        aes(x = rank, y = number_of_pulls)) +
+                  geom_point(size = 3.0, pch = 21, color = "grey2", fill = "green4") +
+                  geom_smooth(color = "black", method = glm, se=FALSE, fullrange=FALSE, level = 0.95) +
+                  labs(title = "Group 4 (n = 8)", 
+                       x = "Rank (Elo Rating)", y = "Lever Presses per Session") +
+                  xlim(1200, 1900) +
+                  ylim(0, 110) +
+                  theme_bw() +
+                  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+                  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+                  scale_fill_manual(values = c("gray69", "blue2")) +
+                  scale_color_manual(values = c("gray69", "blue2")) +
+                  theme(legend.position = "none",
+                       # axis.title = element_blank(),
+                        panel.grid.minor.x = element_blank(),
+                        panel.grid.major.x = element_blank(),
+                        plot.title = element_text(hjust = 0.5),
+                        panel.grid.major.y = element_line( size=.1, color="grey"),
+                       panel.grid.minor.y = element_blank())
+
+yaxis <- textGrob("Number of Presses per Session", rot = 90, gp = gpar(fontsize = 20))
+bottom <- textGrob("Rank (Elo Rating)", gp = gpar(fontsize = 20))
+
+#g<-grid.arrange(logan_rank, griffin_rank, nkima_rank, mason_rank, 
+#                nrow = 2, bottom = bottom, left = yaxis)
+
+g<-grid.arrange(logan_rank, griffin_rank, nkima_rank, mason_rank, 
+                nrow = 2)
+
+
+ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/SOM Material/Figure_S1.png", g, height = 6, width = 10, units = "in")
+```
+
+```{r Figure S2 - How Lever Presses Change over time in each Session Type}
+# Total number of pulls in Experimental Sessions
+accessible.pulls <- subset(model1.data, session_type == "Accessible")
+
+# Total number of asocial pulls in inaccessible sessions
+asocial.pulls <- subset(model1.data, session_type == "Inaccessible")
+asocial.pulls <- subset(asocial.pulls, pull_type == "asocial")
+
+# Total number of selfish pulls in selfish sessions
+selfish.pulls <- subset(model1.data, session_type == "Selfish")
+selfish.pulls <- subset(selfish.pulls, pull_type == "selfish")
+
+accessible.pulls.total <- subset(accessible.pulls, pull_type == "total")
+
+detach("package:Rmisc")
+detach("package:plyr")
+
+accessible.pulls.total <- accessible.pulls.total %>%
+  group_by(subject) %>%
+  mutate(session_cat = as.factor(min_rank(session_number)))
+
+asocial.pulls <- asocial.pulls %>%
+  group_by(subject) %>%
+  mutate(session_cat = as.factor(min_rank(session_number)))
+
+selfish.pulls <- selfish.pulls %>%
+  group_by(subject) %>%
+  mutate(session_cat = as.factor(min_rank(session_number)))
+
+library(plyr)
+library(Rmisc)
+
+acc.pull.total.subset <- subset(accessible.pulls.total, subject != "Bias" & subject != "Gretel" & subject != "Irene")
+
+accessible.pulls.total.summary <- summarySE(acc.pull.total.subset, measurevar="number_of_pulls", groupvars=c("session_cat"))
+
+asocial.pulls.subset <- subset(asocial.pulls, subject != "Beeker" & subject != "Bias" & subject != "Gretel" & subject != "Irene")
+
+asocial.pulls.summary <- summarySE(asocial.pulls.subset, measurevar="number_of_pulls", groupvars=c("session_cat"))
+
+selfish.pulls.subset <- subset(selfish.pulls, subject != "Bailey" & subject != "Bias" & subject != "Gretel" & subject != "Irene" & subject != "Gambit")
+
+selfish.pulls.summary <- summarySE(selfish.pulls.subset, measurevar="number_of_pulls", groupvars=c("session_cat"))
+
+accessible_graph <- ggplot(accessible.pulls.total.summary, aes(x = factor(session_cat), 
+                                          y = number_of_pulls,
+                                          ymin = number_of_pulls - ci,
+                                          ymax = number_of_pulls + ci,
+                                          group = N)) +
+                                geom_point() +
+                                geom_smooth(method = glm, se = TRUE, color = "red", fill = "red") +
+                                geom_errorbar(width = 0.3) +
+                                labs(x = "Session Number", y = "Lever Presses per Session", title = "Experimental Sessions") +
+                                theme_bw() +
+                                #xlim(0, 30) +
+                                #ylim(0, 20) +
+                                theme(legend.position = "none",
+                                      axis.text.x = element_text(size = 10, angle = 0, vjust = 0.5, hjust=0.5), 
+                                      axis.text = element_text(size = 8), 
+                                      axis.title = element_text(size = 20),
+                                      panel.grid.minor.x = element_blank(),
+                                      panel.grid.major.x = element_blank(),
+                                      plot.title = element_text(hjust = 0.5))
+
+inaccessible_graph <- ggplot(asocial.pulls.summary, 
+                                      aes(x = factor(session_cat), 
+                                          y = number_of_pulls,
+                                          ymin = number_of_pulls - ci,
+                                          ymax = number_of_pulls + ci,
+                                          group = N)) +
+                                geom_point() +
+                                geom_line() +
+                                geom_errorbar(width = 0.3) +
+                                labs(x = "Session Number", y = "Lever Presses per Session", title = "Inaccessible Controls") +
+                                theme_bw() +
+                                ylim(0, 25) +
+                                theme(legend.position = "none",
+                                      axis.text.x = element_text(size = 20, angle = 0, vjust = 0.5, hjust=0.5), 
+                                      axis.text = element_text(size = 15), 
+                                      axis.title = element_text(size = 20),
+                                      panel.grid.minor.x = element_blank(),
+                                      panel.grid.major.x = element_blank(),
+                                      plot.title = element_text(hjust = 0.5))
+
+
+selfish_graph <- ggplot(selfish.pulls.summary, 
+                                      aes(x = factor(session_cat), 
+                                          y = number_of_pulls,
+                                          ymin = number_of_pulls - ci,
+                                          ymax = number_of_pulls + ci,
+                                          group = N)) +
+                                geom_point() +
+                                geom_line() +
+                                geom_errorbar(width = 0.3) +
+                                labs(x = "Session Number", y = "Lever Presses per Session", title = "Selfish Controls") +
+                                theme_bw() +
+                                #xlim(0, 30) +
+                                ylim(0, 50) +
+                                theme(legend.position = "none",
+                                      axis.text.x = element_text(size = 20, angle = 0, vjust = 0.5, hjust=0.5), 
+                                      axis.text = element_text(size = 15), 
+                                      axis.title = element_text(size = 20),
+                                      panel.grid.minor.x = element_blank(),
+                                      panel.grid.major.x = element_blank(),
+                                      plot.title = element_text(hjust = 0.5))
+
+Figure_S2 <- grid.arrange(accessible_graph, inaccessible_graph, selfish_graph, nrow = 1)
+
+ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/SOM Material/Figure_S2.png", Figure_S2, height = 5, width = 17, units = "in")
+
+```
+
+
+```{r Figure S3 - Recreation of Figure 2 divided by OT condition}
+rank_by_session_df_OT <- summarySE(model.data, measurevar="number_of_pulls", groupvars=c("rank_category", "session_type", "OT"))
+
+low_df_OT <- subset(rank_by_session_df_OT, rank_category == 4)
+beta_df_OT <- subset(rank_by_session_df_OT, rank_category == 3)
+alphaF_df_OT <- subset(rank_by_session_df_OT, rank_category == 2)
+alphaM_df_OT <-subset(rank_by_session_df_OT, rank_category == 1)
+
+low_ranking_graph_OT <-ggplot(low_df_OT, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(OT))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "All Other Subordinates (n = 11)\n762 Lever Presses (10.0% of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,70,10)) +
+                    scale_fill_manual(values= c("gray69", "blue2"), name = "", labels = c("Control", "+ Oxytocin")) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "N.S.", y_position = 40, textsize = 4, tip_length = 0.20) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), 
+                                annotations = "**", y_position = 70, textsize = 8, tip_length = 0.20) +
+                    ylim(0, 80) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+low_ranking_graph_OT
+
+beta_female_graph_OT <- ggplot(beta_df_OT, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(OT))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "Beta Females (n = 4)\n2592 Lever Presses (34.2 % of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,70,10)) +
+                    scale_fill_manual(values= c("gray69", "blue2"), name = "", labels = c("Control", "+ Oxytocin")) +
+                    ylim(0, 80) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "***", y_position = 38, textsize = 8) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "***", y_position = 68, textsize = 8) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+beta_female_graph_OT
+
+alpha_female_graph_OT <- ggplot(alphaF_df_OT, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(OT))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "Alpha Females (n = 4)\n678 Lever Presses (8.9 % of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,70,10)) +
+                    scale_fill_manual(values= c("gray69", "blue2"), name = "", labels = c("Control", "+ Oxytocin")) +
+                    ylim(0, 80) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "N.S.", y_position = 40, textsize = 4, tip_length = 0.09) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "**", y_position = 70, textsize = 8, tip_length = 0.09) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+alpha_female_graph_OT
+
+alpha_male_graph_OT <- ggplot(alphaM_df_OT, aes(x = factor(session_type), 
+                                  y = number_of_pulls,
+                                  ymin = number_of_pulls - ci, 
+                                  ymax = number_of_pulls + ci,
+                                  fill = factor(OT))) +
+                     geom_bar(stat="identity", alpha=0.7,position = position_dodge()) +
+                     geom_errorbar(position = position_dodge(0.9),
+                                   width=0.4, colour="black", alpha=0.9, size=1.0) +
+                     labs(title = "Alpha Males (n = 4)\n3554 Lever Presses (46.8 % of Total)", 
+                          x = "Session Type", y = "Average Number of Lever Presses per Session") +
+                     scale_y_continuous(breaks=seq(0,60,10)) +
+                    scale_fill_manual(values= c("gray69", "blue2"), name = "", labels = c("Control", "+ Oxytocin")) +
+                    ylim(0, 80) +
+                    geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
+                                annotations = "***", y_position = 38, textsize = 8) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "***", y_position = 68, textsize = 8) +
+                    theme_bw() +
+                    theme(legend.position = "none",
+                          axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
+                          axis.title.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 16),
+                          axis.text.y = element_text(size = 12),
+                          axis.title.y = element_text(size = 14),
+                          panel.grid.major.x = element_blank(),
+                          plot.title = element_text(hjust = 0.5, size = 16))
+alpha_male_graph_OT
+
+
+scale_fill_manual(values= c("gray69", "blue2"), name = "", labels = c("Control", "+ Oxytocin")) +
+
+g_rank_OT<-grid.arrange(alpha_male_graph_OT, alpha_female_graph_OT, beta_female_graph_OT, low_ranking_graph_OT, 
+                nrow = 2)
+ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/SOM Material/Figure_S3.png", g_rank_OT, height = 10, width = 10, units = "in")
+
+```
+
+
+

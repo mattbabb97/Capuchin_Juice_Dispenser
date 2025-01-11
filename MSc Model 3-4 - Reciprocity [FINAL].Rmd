@@ -1,0 +1,479 @@
+---
+title: "Group Prosociality with OT"
+output: word_document
+date: "2022-09-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Install your Packages}
+#install.packages("rstudioapi")
+#install.packages("openxlsx")
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("tidyverse")
+#install.packages("pscl")
+#install.packages("multcomp")
+#install.packages("lsmeans")
+#install.packages("fitdistrplus")
+#install.packages("glmmTMB")
+#install.packages("overdisp")
+#install.packages("sjPlot")
+#install.packages("Rmisc")
+#install.packages("rstatix")
+#install.packages("MASS")
+#install.packages("gridExtra")
+#install.packages("grid")
+#install.packages("gridtext")
+
+```
+
+```{r Library your Packages}
+library(rstudioapi)
+library(openxlsx)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(pscl)
+library(multcomp)
+library(emmeans)
+library(lsmeans)
+library(fitdistrplus)
+library(lme4)
+library(car)
+library(glmmTMB)
+library(emmeans)
+library(overdisp)
+library(sjPlot)
+library(rstatix)
+library(MASS)
+library(gridExtra)
+library(grid)
+library(gridtext)
+
+```
+
+
+```{r Read the Data File}
+
+model5.data <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Model_3_Data_Reciprocity.xlsx")
+
+```
+
+```{r Clean the Data Frames}
+model5.data$session_number <- as.numeric(model5.data$session_number)
+model5.data$subjecta <- as.factor(model5.data$subjecta)
+model5.data$subjectb <- as.factor(model5.data$subjectb)
+model5.data$unique_id <- as.factor(model5.data$unique_id)
+model5.data$pulls_a_to_b <- as.numeric(model5.data$pulls_a_to_b)
+model5.data$pulls_b_to_a <- as.numeric(model5.data$pulls_b_to_a)
+model5.data$sex_a <- as.factor(model5.data$sex_a)
+model5.data$sex_b <- as.factor(model5.data$sex_b)
+model5.data$age_a <- as.numeric(model5.data$age_a)
+model5.data$age_b <- as.numeric(model5.data$age_b)
+model5.data$rank_a <- as.numeric(model5.data$rank_a)
+model5.data$rank_b <- as.numeric(model5.data$rank_b)
+model5.data$rank_score_a <- as.numeric(model5.data$rank_score_a)
+model5.data$rank_score_b <- as.numeric(model5.data$rank_score_b)
+model5.data$group <- as.factor(model5.data$group)
+model5.data$rank_diff <- as.numeric(model5.data$rank_diff)
+model5.data$sex_pair <- as.factor(model5.data$sex_pair)
+model5.data$avg_csi <- as.numeric(model5.data$avg_csi)
+
+levels(model5.data$subjecta)
+levels(model5.data$subjectb)
+summary(model5.data$a_to_b)
+summary(model5.data$b_to_a)
+
+```
+
+```{r Visualize Reciprocity}
+
+reciprocity.data <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Reciprocity Data/reciprocity_data.xlsx")
+
+```
+
+```{r Visualize by Dyad}
+library(plyr)
+library(Rmisc)
+
+# group.rec data is formed from the following code:
+# accessible.data <- subset(model2.data, session_type == "Accessible)
+# logan.data <- subset(accessible.data, group == "logan")
+# logan.rec <- summarySE(logan.data, measurevar="indiv_pull", groupvars=c("dyad_idx", "session_number"))
+# logan.rec <- logan.rec %>%
+#  mutate(a_or_b = if_else(grepl("a", dyad_idx), "a", "b"),
+#         dyad_num = as.numeric(gsub("[^0-9]", "", dyad_idx)))
+
+logan.rec <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Reciprocity Data/logan_rec.xlsx")
+
+by.dyad.logan <- summarySE(logan.rec, measurevar = "indiv_pull", groupvars = c("dyad_num", "a_or_b"))
+
+by.dyad.logan$indiv_pull <- ifelse(by.dyad.logan$a_or_b == "b", -by.dyad.logan$indiv_pull, by.dyad.logan$indiv_pull)
+
+griffin.rec <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Reciprocity Data/griffin_rec.xlsx")
+
+by.dyad.griffin <- summarySE(griffin.rec, measurevar = "indiv_pull", groupvars = c("dyad_num", "a_or_b"))
+
+by.dyad.griffin$indiv_pull <- ifelse(by.dyad.griffin$a_or_b == "b", -by.dyad.griffin$indiv_pull, by.dyad.griffin$indiv_pull)
+
+nkima.rec <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Reciprocity Data/nkima_rec.xlsx")
+
+by.dyad.nkima <- summarySE(nkima.rec, measurevar = "indiv_pull", groupvars = c("dyad_num", "a_or_b"))
+
+by.dyad.nkima$indiv_pull <- ifelse(by.dyad.nkima$a_or_b == "b", -by.dyad.nkima$indiv_pull, by.dyad.nkima$indiv_pull)
+
+mason.rec <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Reciprocity Data/mason_rec.xlsx")
+
+by.dyad.mason <- summarySE(mason.rec, measurevar = "indiv_pull", groupvars = c("dyad_num", "a_or_b"))
+
+by.dyad.mason$indiv_pull <- ifelse(by.dyad.mason$a_or_b == "b", -by.dyad.mason$indiv_pull, by.dyad.mason$indiv_pull)
+```
+
+
+```{r Visualize by Dyad}
+logan_pull_graph <- ggplot(by.dyad.logan, aes(x=dyad_num, 
+                                              y = indiv_pull,
+                                              ymin = indiv_pull - ci,
+                                              ymax = indiv_pull + ci,
+                                              fill = a_or_b)) +
+  geom_bar(stat = "identity", position = "identity") +
+  geom_errorbar(position = "identity", width=0.4, colour="black", alpha=0.9, size=1.0) +
+  scale_fill_manual(values = c("lightgreen", "darkgreen"), name = "", labels = c("Presses favor Subordinate", "Presses favor Dominant")) +
+  labs(title = "Group 1 (n = 6)", x = "Dyads", y = "Average lever presses per session") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 14),
+        legend.position = "none",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +  # Adjust axis text size
+  coord_flip() +  # Flip coordinates for horizontal bars
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  ylim(-30, 30)
+
+griffin_pull_graph <- ggplot(by.dyad.griffin, aes(x=dyad_num, y = indiv_pull,
+                                              ymin = indiv_pull - ci,
+                                              ymax = indiv_pull + ci,
+                                              fill = a_or_b)) +
+  geom_bar(stat = "identity", position = "identity") +
+  geom_errorbar(position = "identity", width=0.4, colour="black", alpha=0.9, size=1.0) +
+  scale_fill_manual(values = c("lightgreen", "darkgreen"), name = "", labels = c("Presses favor Subordinate", "Presses favor Dominant")) +
+  labs(title = "Group 2 (n = 5)", x = "Dyads", y = "Average lever presses per session") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 14),
+        legend.position = "none",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +  # Adjust axis text size
+  coord_flip() +  # Flip coordinates for horizontal bars
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  ylim(-30, 30)
+
+
+nkima_pull_graph <- ggplot(by.dyad.nkima, aes(x=dyad_num, y = indiv_pull,
+                                              ymin = indiv_pull - ci,
+                                              ymax = indiv_pull + ci,
+                                              fill = a_or_b)) +
+  geom_bar(stat = "identity", position = "identity") +
+  geom_errorbar(position = "identity", width=0.4, colour="black", alpha=0.9, size=1.0) +
+  scale_fill_manual(values = c("lightgreen", "darkgreen"), name = "", labels = c("Presses favor Subordinate", "Presses favor Dominant")) +
+  labs(title = "Group 3 (n = 4)", x = "Dyads", y = "Average lever presses per session") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 14),
+        legend.position = "none",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +  # Adjust axis text size
+  coord_flip() +  # Flip coordinates for horizontal bars
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  ylim(-30, 30)
+
+
+by.dyad.mason.no.zero <- subset(by.dyad.mason, indiv_pull != 0.00)
+
+by.dyad.mason.no.zero$dyad_num_new <- by.dyad.mason.no.zero$dyad_num
+
+by.dyad.mason.no.zero$dyad_num_new <- ifelse(by.dyad.mason.no.zero$dyad_num_new == 8, 5, 
+                                             ifelse(by.dyad.mason.no.zero$dyad_num_new == 14, 6, 
+                                                    ifelse(by.dyad.mason.no.zero$dyad_num_new == 15, 7,
+                                                           ifelse(by.dyad.mason.no.zero$dyad_num_new == 16, 8,
+                                                                  ifelse(by.dyad.mason.no.zero$dyad_num_new == 19, 9,
+                                                                  ifelse(by.dyad.mason.no.zero$dyad_num_new == 20, 10,
+                                                                         ifelse(by.dyad.mason.no.zero$dyad_num_new == 22, 11,
+                                                                                ifelse(by.dyad.mason.no.zero$dyad_num_new == 23, 12,
+                                                                                       ifelse(by.dyad.mason.no.zero$dyad_num_new == 24, 13,
+                                                                                              ifelse(by.dyad.mason.no.zero$dyad_num_new == 25, 14,
+                                                                                                     by.dyad.mason.no.zero$dyad_num_new))))))))))
+
+
+mason_pull_graph <- ggplot(by.dyad.mason.no.zero, aes(x=dyad_num_new, y = indiv_pull,
+                                              ymin = indiv_pull - ci,
+                                              ymax = indiv_pull + ci,
+                                              fill = a_or_b)) +
+  geom_bar(stat = "identity", position = "identity") +
+  geom_errorbar(position = "identity", width=0.4, colour="black", alpha=0.9, size=1.0) +
+  scale_fill_manual(values = c("lightgreen", "darkgreen"), name = "", labels = c("Presses favor Subordinate", "Presses favor Dominant")) +
+  labs(title = "Group 4 (n = 8)", x = "Dyads", y = "Average lever presses per session") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 14),
+        legend.position = "none",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +  # Adjust axis text size
+  coord_flip() +  # Flip coordinates for horizontal bars
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  ylim(-30, 30)
+
+logan_pull_graph
+griffin_pull_graph
+nkima_pull_graph
+mason_pull_graph
+
+g_reciprocity<-grid.arrange(logan_pull_graph, griffin_pull_graph, nkima_pull_graph, mason_pull_graph, 
+                nrow = 2)
+
+ggsave("Reciprocity_per_sessions.png", g_reciprocity, height = 6, width = 8, units = "in")
+
+rm(logan_pull_graph, griffin_pull_graph, nkima_pull_graph, mason_pull_graph)
+
+rm(by.dyad.griffin, by.dyad.logan, by.dyad.mason, by.dyad.nkima, by.dyad.mason.no.zero)
+
+```
+
+
+```{r Run a correlation between A to B and B to A}
+# Remove the pulls where there was a 0, because there is no contingent short term reciprocity if one pair is never pulling
+reciprocity.data.no.zero <- subset(reciprocity.data, a_to_b != 0)
+
+cor.test(reciprocity.data.no.zero$a_to_b, reciprocity.data.no.zero$b_to_a, method = c("pearson"))
+```
+It seems that there was a non-significant NEGATIVE correlation, indicating that within each session, as Pulls from A to B increased, Pulls from B to A decreased. However, it is possible that there is general reciprocity going on. Maybe Individual A pulls more during sessions in which they also recieved a lot of pulls themselves, independent of who pulled for them. Of course, this could be due to a number of reasons/intentions, but lets investigate if it was happening.
+
+GENERALIZED RECIPROCITY - MODEL 4 ------------------------------------------------------------------------------------------------------------------------------
+
+```{r Now Check if there was General Reciprocity. Independent of dyads.}
+# Attach the data frame that is broken down by each subject, the number of pulls they recieved and the number of pulls they donated per session
+general.rec <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Reciprocity Data/Pulls_and_Recieves_per_Session_per_Subject.xlsx")
+
+# First a simple correlation:
+# A significant negative correlation! Wow so even generally, the more one receives the less likely they are to pull
+cor.test(general.rec$rec_sum, general.rec$pull_sum, method = c("pearson"))
+
+# Now a correlation where all the sessions in which a subject did not recieve pulls are removed
+# Still a significant negative correlation
+general.rec2 <- subset(general.rec, rec_sum != 0)
+cor.test(general.rec2$rec_sum, general.rec2$pull_sum, method = c("pearson"))
+
+rm(general.rec2)
+```
+
+
+```{r Now Visualize the General Reciprocity}
+general.recip.rec <- summarySE(general.rec, measurevar = "rec_sum", groupvars = "subject")
+general.recip.rec$give_or_rec <- "Receive"
+general.recip.rec$rec_sum <- -general.recip.rec$rec_sum
+
+general.recip.give <- summarySE(general.rec, measurevar = "pull_sum", groupvars = "subject")
+general.recip.give$give_or_rec <- "Give"
+
+colnames(general.recip.rec)[3] <- "avg_pulls"
+colnames(general.recip.give)[3] <- "avg_pulls"
+
+general.recip.visual <- rbind(general.recip.rec, general.recip.give)
+
+general_pull_graph <- ggplot(general.recip.visual, aes(x=subject, 
+                                                       y = avg_pulls,
+                                              ymin = avg_pulls - ci,
+                                              ymax = avg_pulls + ci,
+                                              fill = give_or_rec)) +
+  geom_bar(stat = "identity", position = "identity") +
+  geom_errorbar(position = "identity", width=0.4, colour="black", alpha=0.9, size=1.0) +
+  scale_fill_manual(values = c("lightgreen", "darkgreen"), name = "", labels = c("Given", "Received")) +
+  labs(x = "Subject", y = "Average lever presses per session") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 20),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        axis.title = element_text(size = 25)) +  # Adjust axis text size
+  coord_flip() +  # Flip coordinates for horizontal bars
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  ylim(-50, 50)
+
+general_pull_graph
+
+ggsave("General_Reciprocity_Graph.png", height = 10, width = 15, units = "in")
+
+```
+
+```{r GLMM Analysis to Determine if Reciprocity was occurring}
+head(model5.data)
+# Response Variable
+summary(model5.data$pulls_a_to_b)
+
+# Check for over dispersion
+# Over dispersion occurs when the Variance of your DV is >>> Mean of your DV
+var(model5.data$pulls_a_to_b)
+mean(model5.data$pulls_a_to_b)
+
+# Variance Ratio = 17.018
+var(model5.data$pulls_a_to_b)/mean(model5.data$pulls_a_to_b)
+# Over dispersion = PRESENT!
+```
+Mean: 0.693
+Variance: 11.79
+Variance Ratio: 17.018
+
+HUGE OVERDISPERSION means we need Negative Binomial or Quasi-Poisson
+
+
+```{r Correlation between CSI and Rank Difference}
+# Correlation between CSI and Rank
+model5.data$rank_diff_abs <- abs(model5.data$rank_diff)
+
+ggplot(model5.data, aes(x = rank_diff_abs, y = avg_csi)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  theme_classic()
+
+cor.test(model5.data$avg_csi, model5.data$rank_diff_abs, method = "pearson")
+```
+
+```{r ZINB [NOT USED] Model 3: Short Term Contigent Reciprocity within Dyad within Session}
+# Negative Binomial Regression
+ZINB_5 <- glmmTMB(pulls_a_to_b ~ pulls_b_to_a + rank_diff +
+                  (1 + pulls_b_to_a | subjecta) + (1 + pulls_b_to_a | subjectb) + (1 + pulls_b_to_a | unique_id),
+                zi = ~1,
+                family = nbinom2, data = model5.data)
+
+# The model does NOT converge: Error in eigen(h) : infinite or missing values in 'x'
+```
+
+
+```{r ZINB [NOT USED] Model 3: Short Term Contigent Reciprocity within Dyad within Session}
+ZINB_5 <- glmmTMB(pulls_a_to_b ~ pulls_b_to_a + rank_diff +
+                  (1 + pulls_b_to_a | subjecta) + (1 + pulls_b_to_a | subjectb),
+                zi = ~1,
+                family = nbinom2, data = model5.data)
+
+
+summary(ZINB_5)
+
+Anova(ZINB_5, type = 3)
+
+tab_model(ZINB_5,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "ZINB Regression Predicting the Number of Prosocial Lever Pulls")
+```
+
+
+```{r ZIP Model 3: Short Term Contigent Reciprocity within Dyad within Session}
+# Quasi-Poisson Regression
+QUASI_5 <- glmmTMB(pulls_a_to_b ~ pulls_b_to_a + rank_diff +
+                  (1 + pulls_b_to_a | subjecta) + (1 + pulls_b_to_a | subjectb) + (1 + pulls_b_to_a | unique_id),
+                zi = ~1,
+                family = nbinom1, data = model5.data)
+
+# The model does NOT converge: Error in eigen(h) : infinite or missing values in 'x'
+
+QUASI_5 <- glmmTMB(pulls_a_to_b ~ pulls_b_to_a + rank_diff +
+                  (1 + pulls_b_to_a | subjecta) + (1 + pulls_b_to_a | subjectb),
+                zi = ~1,
+                family = nbinom1, data = model5.data)
+
+# This model also does NOT converge, try again:
+QUASI_5 <- glmmTMB(pulls_a_to_b ~ pulls_b_to_a + rank_diff +
+                  (1 | subjecta) + (1 + pulls_b_to_a | subjectb),
+                zi = ~1,
+                family = nbinom1, data = model5.data)
+
+# This model also does NOT converge, try again:
+QUASI_5 <- glmmTMB(pulls_a_to_b ~ pulls_b_to_a + rank_diff +
+                  (1 | subjecta) + (1 | subjectb),
+                zi = ~1,
+                family = nbinom1, data = model5.data)
+
+# This model converges! yay...
+QUASI_5 <- glmmTMB(pulls_a_to_b ~ pulls_b_to_a +
+                  (1 | subjecta) + (1 | subjectb) + (1 | unique_id),
+                zi = ~1,
+                family = nbinom1, data = model5.data)
+
+
+
+summary(QUASI_5)
+
+Anova(QUASI_5, type = 3)
+
+tab_model(QUASI_5,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Prosocial Lever Pulls")
+
+
+```
+
+```{r Model 4: ZIP Model for Generalized Reciprocity within each Session}
+# This model does not converge
+QUASI_6 <- glmmTMB(pull_sum ~ rec_sum*rank_score +
+                  (1 + rec_sum| subject),
+                zi = ~1,
+                family = nbinom1, data = general.rec)
+
+# This model converges
+QUASI_6 <- glmmTMB(pull_sum ~ rec_sum*rank_score +
+                  (1 | subject),
+                zi = ~1,
+                family = nbinom1, data = general.rec)
+
+summary(QUASI_6)
+
+  Anova(QUASI_6, type = 3)
+
+tab_model(QUASI_6,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "ZINB Regression Predicting the Number of Prosocial Lever Pulls")
+
+```
+
+
+```{r Compare both models to a random_effects only model}
+Null5 <- glmmTMB(pulls_a_to_b ~ (1 | subjecta) + (1 | subjectb) + (1 | unique_id),
+                zi = ~1,
+                family = nbinom1, data = model5.data)
+
+Null6 <- glmmTMB(pull_sum ~ (1 | subject),
+                zi = ~1,
+                family = nbinom1, data = general.rec)
+
+
+anova(Null5, QUASI_5, test = "chisq")
+
+anova(Null6, QUASI_6, test = "chisq")
+
+```
+
+Model 3 did not show signficant improvement from null model
+Model 4 did

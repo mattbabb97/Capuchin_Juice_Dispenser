@@ -1,0 +1,690 @@
+---
+title: "Group Prosociality with OT"
+output: word_document
+date: "2022-09-19"
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Install your Packages}
+#install.packages("rstudioapi")
+#install.packages("openxlsx")
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("tidyverse")
+#install.packages("pscl")
+#install.packages("multcomp")
+#install.packages("lsmeans")
+#install.packages("fitdistrplus")
+#install.packages("glmmTMB")
+#install.packages("overdisp")
+#install.packages("sjPlot")
+#install.packages("Rmisc")
+#install.packages("rstatix")
+#install.packages("MASS")
+```
+
+```{r Library your Packages}
+library(rstudioapi)
+library(openxlsx)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(pscl)
+library(multcomp)
+library(emmeans)
+library(lsmeans)
+library(fitdistrplus)
+library(lme4)
+library(car)
+library(glmmTMB)
+library(emmeans)
+library(overdisp)
+library(sjPlot)
+library(rstatix)
+library(MASS)
+```
+
+```{r Read the Data File}
+
+model3.data <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Model_5_Data_Frame.xlsx")
+
+group_dictionary <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Group Dictionary.xlsx")
+
+recipient.demographics <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Recipient_Demographics.xlsx")
+
+proximity.demographics <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Proximity_Demographics.xlsx")
+
+demographics <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Monkey_Demographics2.xlsx")
+
+merged.data <- merge(x = model3.data, y = group_dictionary, by.x = "donor", by.y = "subject")
+merged.data <- merged.data[, -which(names(merged.data) == "rank.y")]
+merged.data <- merged.data[, -which(names(merged.data) == "rank_score.y")]
+colnames(merged.data)[colnames(merged.data) == "rank.x"] <- "rank"
+colnames(merged.data)[colnames(merged.data) == "rank_score.x"] <- "rank_score"
+
+head(merged.data)
+model3.data <- merged.data
+
+rm(group_dictionary, merged.data)
+
+```
+
+```{r Clean the Data Frames}
+
+model3.data$time <- as.numeric(model3.data$time)
+model3.data$session_number <- as.numeric(model3.data$session_number)
+model3.data$session_type <- as.factor(model3.data$session_type)
+model3.data$pull_number <- as.numeric(model3.data$pull_number)
+model3.data$donor <- as.factor(model3.data$donor)
+summary(model3.data$donor)
+model3.data$rank <- as.numeric(model3.data$rank)
+model3.data$recipient_y_n <- as.factor(model3.data$recipient_y_n)
+model3.data$recipient <- as.factor(model3.data$recipient)
+model3.data$proximity_y_n <- as.factor(model3.data$proximity_y_n)
+model3.data$proximity_a <- as.factor(model3.data$proximity_a)
+model3.data$proximity_b <- as.factor(model3.data$proximity_b)
+model3.data$aggression <- as.factor(model3.data$aggression)
+model3.data$run <- as.factor(model3.data$run)
+model3.data$OT <- as.factor(model3.data$OT)
+model3.data$rank_score <- as.numeric(model3.data$rank_score)
+model3.data$group <- as.factor(model3.data$group)
+
+levels(model3.data$donor)
+levels(model3.data$session_type)
+levels(model3.data$aggression)
+levels(model3.data$run)
+levels(model3.data$OT)
+levels(model3.data$recipient_y_n)
+levels(model3.data$proximity_y_n)
+
+# Reorder the data frame to have a chronological order of the pulls
+model3.data <- model3.data %>% 
+  arrange(group, session_number, time)
+
+# Now form the previous_donor column, shifting the "donor" column down 1
+model3.data <- model3.data %>%
+  mutate(previous_donor = lag(donor))
+
+# Now calculate the number of seconds that elapsed since the previous pull was made
+model3.data <- model3.data %>%
+  mutate(time_since_last_pull = time - lag(time))
+
+#write.csv(model3.data, file = "Model_6_Data_Edited.csv", row.names = FALSE)
+
+```
+
+```{r For Model 5, we are interested in Runs, but those only occur in Accessible Sessions }
+accessible.data <- subset(model3.data, session_type == "Accessible")
+summary(accessible.data$session_type)
+
+# Number of Runs
+nrow(subset(accessible.data, run == 1))
+# Number of Aggressions
+nrow(subset(accessible.data, aggression == 1))
+
+
+```
+
+Total Pulls in the Accessible Sessions: 4933
+
+Total Pulls with at least 1 recipient: 3398
+
+Total Pulls with no recipient: 1534
+
+Total Pulls followed by a Run: 2562
+
+Total Pulls followed by an Aggression: 103
+
+```{r Descriptives}
+run.data <- subset(accessible.data, run == 1)
+# Number of runs when no one was there:
+nrow(subset(run.data, recipient_y_n == 0 & proximity_y_n == 0))
+# Number of Runs when recipient was there, but no one in prox
+nrow(subset(run.data, recipient_y_n == 1 & proximity_y_n == 0))
+# Number of Runs when there was a monkey in prox but did not receive juice
+nrow(subset(run.data, recipient_y_n == 0 & proximity_y_n == 1))
+# Number of runs when there was at least 2 monkeys near the fountain, one of which received
+nrow(subset(run.data, recipient_y_n == 1 & proximity_y_n == 1))
+
+no.run.data <- subset(accessible.data, run == 0)
+# Number of runs when no one was there:
+nrow(subset(no.run.data, recipient_y_n == 0 & proximity_y_n == 0))
+# Number of Runs when recipient was there, but no one in prox
+nrow(subset(no.run.data, recipient_y_n == 1 & proximity_y_n == 0))
+# Number of Runs when there was a monkey in prox but did not receive juice
+nrow(subset(no.run.data, recipient_y_n == 0 & proximity_y_n == 1))
+# Number of runs when there was at least 2 monkeys near the fountain, one of which received
+nrow(subset(no.run.data, recipient_y_n == 1 & proximity_y_n == 1))
+
+nrow(subset(run.data, recipient_y_n == 1))
+nrow(subset(no.run.data, recipient_y_n == 1))
+
+# Calculate Proportions
+(nrow(subset(run.data, recipient_y_n == 0 & proximity_y_n == 0))) / (nrow(subset(no.run.data, recipient_y_n == 0 & proximity_y_n == 0)) + nrow(subset(run.data, recipient_y_n == 0 & proximity_y_n == 0)))
+
+(nrow(subset(run.data, recipient_y_n == 1 & proximity_y_n == 0))) / (nrow(subset(no.run.data, recipient_y_n == 1 & proximity_y_n == 0)) + nrow(subset(run.data, recipient_y_n == 1 & proximity_y_n == 0)))
+
+(nrow(subset(run.data, recipient_y_n == 0 & proximity_y_n == 1))) / (nrow(subset(no.run.data, recipient_y_n == 0 & proximity_y_n == 1)) + nrow(subset(run.data, recipient_y_n == 0 & proximity_y_n == 1)))
+
+(nrow(subset(run.data, recipient_y_n == 1 & proximity_y_n == 1))) / (nrow(subset(no.run.data, recipient_y_n == 1 & proximity_y_n == 1)) + nrow(subset(run.data, recipient_y_n == 1 & proximity_y_n == 1)))
+```
+# Number of runs when no one was there: 880
+# Number of NO RUNs when no one was there: 662
+# Proportion of Runs: 0.57
+
+# Number of runs whith a recipient but no one else was there: 1223
+# Number of NO RUNs whith a recipient but no one else was there: 1118
+# Proportion of Runs: 0.52
+
+# Number of Runs when there was a monkey in prox but did not receive juice: 146
+# Number of NO RUNs when there was a monkey in prox but did not receive juice: 140
+# Proportion of Runs: 0.51
+
+# Number of runs when there was at least 2 monkeys near the fountain, one of which received: 313
+# Number of NO RUNs when there was at least 2 monkeys near the fountain, one of which received: 451
+# Proportion of Runs: 0.41
+
+```{r}
+accessible.data$rec_or_prox <- ifelse(accessible.data$recipient_y_n == 0 & accessible.data$proximity_y_n == 0, 0, 1)
+
+detach("package:Rmisc")
+detach("package:plyr")
+
+session_run_counts <- accessible.data %>%
+  group_by(donor, session_number, rec_or_prox) %>%  # Group by donor, session_number, and rec_or_prox
+  summarize(
+    runs = sum(run == 1),                             # Count of `run == 1`
+    no_runs = sum(run == 0),                          # Count of `run == 0`
+    .groups = "drop"                                  # Ungroup after summarizing
+  ) %>%
+  # Ensure that all combinations of donor, session_number, and rec_or_prox are present
+  complete(donor, session_number, rec_or_prox, fill = list(runs = 0, no_runs = 0))
+
+# Sort the data frame by donor (alphabetically) and then by session_number (ascending)
+session_run_counts <- session_run_counts %>%
+  arrange(donor, session_number)
+
+temp_demogr <- subset(demographics, select = c("subject", "group", "rank_cat"))
+
+session.run.counts <- merge(session_run_counts, temp_demogr, by.x = "donor", by.y = "subject")
+
+session.run.counts <- subset(session.run.counts, select = c("donor", "group", "rank_cat", "session_number", "rec_or_prox", "runs", "no_runs"))
+
+session.run.counts$total_runs <- (session.run.counts$runs + session.run.counts$no_runs)
+
+session.run.counts <- session.run.counts %>%
+  mutate(
+    run_prop = ifelse(is.nan(runs / total_runs), 0, runs / total_runs)  # Replace NaN with 0
+  )
+
+# Logan's Group: Remove 12, 14, 19, 21, 26, 28, 33, 35
+logan.runs <- subset(session.run.counts, group == "logan")
+logan.runs <- logan.runs %>%
+  filter(!session_number %in% c(12, 14, 19, 21, 26, 28, 33, 35))
+
+griffin.runs <- subset(session.run.counts, group == "griffin")
+griffin.runs <- griffin.runs %>%
+  filter(!session_number %in% c(12, 14, 19, 21, 26, 28, 33, 35))
+
+
+nkima.runs <- subset(session.run.counts, group == "nkima")
+nkima.runs <- nkima.runs %>%
+  filter(!session_number %in% c(13, 15, 20, 22, 27, 29, 34, 36))
+
+
+mason.runs <- subset(session.run.counts, group == "mason")
+mason.runs <- mason.runs %>%
+  filter(!session_number %in% c(12, 16, 19, 23, 26, 30, 33, 37))
+
+session.run.counts <- rbind(logan.runs, griffin.runs, nkima.runs, mason.runs)
+
+rm(temp_demogr, session_run_counts, logan.runs, griffin.runs, nkima.runs, mason.runs)
+
+library(plyr)
+library(Rmisc)
+
+session.run.summary <- summarySE(session.run.counts, measurevar = "run_prop", groupvars = c("rank_cat", "rec_or_prox"))
+session.run.summary$rank_cat <- as.factor(session.run.summary$rank_cat)
+session.run.summary$rec_or_prox <- as.factor(session.run.summary$rec_or_prox)
+
+
+```
+
+
+```{r}
+
+significance_data <- data.frame(
+  rank_cat = c("1", "2", "3", "4"),        # Category labels
+    rec_or_prox = c("0", "1", "0", "1"), # Corresponding to rec_or_prox
+   y_position = c(0.80, 0.65, 0.65, 0.40),    # Position for the significance labels
+  label = c("**", "***", "***", "***"),     # Significance labels
+  xmin = c(0.8, 1.8, 2.8, 3.8),            # Starting x positions for the horizontal lines
+  xmax = c(1.2, 2.2, 3.2, 4.2)             # Ending x positions for the horizontal lines
+)
+
+
+Figure_5 <- ggplot(session.run.summary, aes(x = rank_cat, y = run_prop, fill = rec_or_prox)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = run_prop - ci, ymax = run_prop + ci),
+                position = position_dodge(0.9), width = 0.2) +
+  geom_text(data = significance_data, aes(x = rank_cat, y = y_position, label = label), 
+            size = 6, color = "black", fontface = "bold") +
+  geom_segment(data = significance_data,
+               aes(x = xmin, xend = xmax, y = y_position - 0.02, yend = y_position - 0.02),
+               color = "black", size = 0.6) +
+  theme_bw() +
+  labs(x = "Rank Category", y = "Proportion of Presses followed by a run") +
+  scale_fill_manual(values = c("0" = "darkgreen", "1" = "lightgreen"), labels = c("No Recipient", "Recipient Present")) +
+  scale_x_discrete(labels = c("1" = "Alpha Males", "2" = "Alpha Females", "3" = "Beta Females", "4" = "Subordinates")) +
+  coord_cartesian(ylim = c(0, 1)) +
+  theme(axis.title.x = element_text(size = 18),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 16),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 12),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = c(0.80, 0.85),
+        )
+
+Figure_5
+
+ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/Figure_5.png", height = 5, width = 8)
+```
+
+
+
+```{r Make the Dataframe for Visualization of Counts}
+no.recipient <- subset(accessible.data, recipient_y_n == 0 & proximity_y_n == 0)
+table(no.recipient$donor, no.recipient$run)
+temp1 <- data.frame(table(no.recipient$donor, no.recipient$run))
+no.run.temp <- subset(temp1, Var2 == 0)
+run.temp <- subset(temp1, Var2 == 1)
+no.recipient <- merge(no.run.temp, run.temp, by.x = "Var1", by.y = "Var1")
+no.recipient$rec <- 0
+no.recipient$prox <- 0
+no.recipient$rec_or_prox_var <- 0
+
+prox.no.recipient <- subset(accessible.data, recipient_y_n == 0 & proximity_y_n == 1)
+table(prox.no.recipient$donor, prox.no.recipient$run)
+temp1 <- data.frame(table(prox.no.recipient$donor, prox.no.recipient$run))
+no.run.temp <- subset(temp1, Var2 == 0)
+run.temp <- subset(temp1, Var2 == 1)
+prox.no.recipient <- merge(no.run.temp, run.temp, by.x = "Var1", by.y = "Var1")
+prox.no.recipient$rec <- 0
+prox.no.recipient$prox <- 1
+prox.no.recipient$rec_or_prox_var <- 1
+  
+recipient.no.prox <- subset(accessible.data, recipient_y_n == 1 & proximity_y_n == 0)
+table(recipient.no.prox$donor, recipient.no.prox$run)
+temp1 <- data.frame(table(recipient.no.prox$donor, recipient.no.prox$run))
+no.run.temp <- subset(temp1, Var2 == 0)
+run.temp <- subset(temp1, Var2 == 1)
+recipient.no.prox <- merge(no.run.temp, run.temp, by.x = "Var1", by.y = "Var1")
+recipient.no.prox$rec <- 1
+recipient.no.prox$prox <- 0
+recipient.no.prox$rec_or_prox_var <- 1
+
+recipient.and.prox <- subset(accessible.data, recipient_y_n == 1 & proximity_y_n == 1)
+table(recipient.and.prox$donor, recipient.and.prox$run)
+temp1 <- data.frame(table(recipient.and.prox$donor, recipient.and.prox$run))
+no.run.temp <- subset(temp1, Var2 == 0)
+run.temp <- subset(temp1, Var2 == 1)
+recipient.and.prox <- merge(no.run.temp, run.temp, by.x = "Var1", by.y = "Var1")
+recipient.and.prox$rec <- 1
+recipient.and.prox$prox <- 1
+recipient.and.prox$rec_or_prox_var <- 1
+
+recipient.at.all <- subset(accessible.data, recipient_y_n == 1 | proximity_y_n == 1)
+table(recipient.at.all$donor, recipient.at.all$run)
+temp1 <- data.frame(table(recipient.at.all$donor, recipient.at.all$run))
+no.run.temp <- subset(temp1, Var2 == 0)
+run.temp <- subset(temp1, Var2 == 1)
+recipient.at.all <- merge(no.run.temp, run.temp, by.x = "Var1", by.y = "Var1")
+recipient.at.all$rec_or_prox_var <- 1
+
+runs.by.donor <- rbind(no.recipient, recipient.no.prox, prox.no.recipient, recipient.and.prox)
+colnames(runs.by.donor)[1] = "donor"
+colnames(runs.by.donor)[3] = "no_run"
+colnames(runs.by.donor)[5] = "run"
+
+no.rec.temp <- subset(no.recipient, select = c(1:5, 8))
+runs.by.donor.simplified <- rbind(no.rec.temp, recipient.at.all)
+rm(no.rec.temp)
+colnames(runs.by.donor.simplified)[1] = "donor"
+colnames(runs.by.donor.simplified)[3] = "no_run"
+colnames(runs.by.donor.simplified)[5] = "run"
+
+runs.by.donor <- subset(runs.by.donor, select = c(1,3,5,6,7,8))
+runs.by.donor.simplified <- subset(runs.by.donor.simplified, select = c(1,3,5,6))
+
+
+runs.by.donor$runs_per_session = (runs.by.donor$run)/30
+runs.by.donor$no_runs_per_session = (runs.by.donor$no_run)/30
+runs.by.donor.simplified$runs_per_session = (runs.by.donor.simplified$run)/30
+runs.by.donor.simplified$no_runs_per_session = (runs.by.donor.simplified$no_run)/30
+
+runs.by.donor$donor <- as.factor(runs.by.donor$donor)
+runs.by.donor$rec <- as.factor(runs.by.donor$rec)
+runs.by.donor.simplified$donor <- as.factor(runs.by.donor.simplified$donor)
+runs.by.donor.simplified$rec_or_prox_var <- as.factor(runs.by.donor.simplified$rec_or_prox_var)
+
+
+runs.by.donor$run_prop <- ((runs.by.donor$run)/(runs.by.donor$run + runs.by.donor$no_run))
+runs.by.donor.simplified$run_prop <- ((runs.by.donor.simplified$run)/(runs.by.donor.simplified$run + runs.by.donor.simplified$no_run))
+
+runs.by.donor[is.na(runs.by.donor)] <- 0
+runs.by.donor.simplified[is.na(runs.by.donor.simplified)] <- 0
+
+rm(no.recipient, recipient.no.prox, prox.no.recipient, recipient.and.prox, temp1, no.run.temp, run.temp)
+```
+
+```{r}
+
+```
+
+
+```{r Visualize Runs by Recipient/Proximity}
+# Use this for bargraphs
+library(plyr)
+library(Rmisc)
+runs.by.donor$rec_or_prox_var <- ifelse(runs.by.donor$rec == 0 & runs.by.donor$prox == 0, 0, 1)
+
+
+```
+
+
+```{r}
+demographics <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Final Results and Final R Code/Monkey_Demographics2.xlsx")
+
+merged.data <- merge(x = demographics, y = runs.by.donor, by.x = "subject", by.y = "donor")
+nrow(merged.data) == nrow(merged.data)
+head(merged.data)
+runs.by.donor <- merged.data
+
+Run_by_Rank_Graph <- ggplot(runs.by.donor, aes(x = rank, y = run_prop, color = rec)) +
+  geom_point() +
+  geom_jitter(width = 0.5, height = 0) +
+  geom_smooth(aes(color = rec), method = glm, se=FALSE, fullrange=FALSE, level = 0.95) +
+  #facet_wrap(~rec) +
+  theme_bw() +
+  labs(x = "Rank (Elo Rating)", y = "Proportion of pulls followed by a run") +
+  scale_color_manual(values = c("0" = "red", "1" = "purple4"), labels = c("No Recipient", "Recipient Present")) +
+  theme(axis.title.x = element_text(size = 18),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 16),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 12),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = c(0.85, 0.85),
+        )
+
+Run_by_Rank_Graph
+#ggsave("run_by_rank_graph.png", height = 5, width = 8, units = "in")
+```
+
+
+```{r}
+rank.cat.data <- runs.by.donor
+rank.cat.data <- subset(rank.cat.data, select = c("subject", "sex", "age", "rank", "rank_score", "group", "no_run", "run", "rec", "prox"))
+rank.cat.data$rec_or_prox <- ifelse(rank.cat.data$rec == 0 & rank.cat.data$prox == 0, 0, 1)
+
+detach("package:Rmisc")
+detach("package:plyr")
+rank.cat.data2 <- rank.cat.data %>%
+  group_by(subject, rec_or_prox) %>%
+  summarise(run_rec = sum(run), no_run_rec = sum(no_run)) %>%
+  ungroup()
+library(plyr)
+library(Rmisc)
+
+rank.cat.data2$runs_per_session = (rank.cat.data2$run_rec)/30
+rank.cat.data2$no_runs_per_session = (rank.cat.data2$no_run_rec)/30
+
+rank.cat.data2$subject <- as.factor(rank.cat.data2$subject)
+rank.cat.data2$rec_or_prox <- as.factor(rank.cat.data2$rec_or_prox)
+rank.cat.data2$run_prop <- ((rank.cat.data2$run_rec)/(rank.cat.data2$run_rec + rank.cat.data2$no_run_rec))
+rank.cat.data2$run_prop[is.nan(rank.cat.data2$run_prop)] <- 0.00
+rank.cat.data.merged <- merge(x = demographics, y = rank.cat.data2, by.x = "subject", by.y = "subject")
+
+rank.cat.data.merged$rank_cat <- ifelse(rank.cat.data.merged$rank_score == 1, 1, 4)
+rank.cat.data.merged$rank_cat <- ifelse(rank.cat.data.merged$subject == "Ivory" | rank.cat.data.merged$subject == "Lexi" | rank.cat.data.merged$subject == "Gambit" | rank.cat.data.merged$subject == "Scarlett", 2, rank.cat.data.merged$rank_cat)
+rank.cat.data.merged$rank_cat <- ifelse(rank.cat.data.merged$subject == "Ira" | rank.cat.data.merged$subject == "Lily" | rank.cat.data.merged$subject == "Nala" | rank.cat.data.merged$subject == "Beeker", 3, rank.cat.data.merged$rank_cat)
+
+rank.cat.data.merged$rank_cat <- as.factor(rank.cat.data.merged$rank_cat)
+
+
+df_runs_by_rank_cat <- summarySE(rank.cat.data.merged, measurevar = "run_prop", groupvars = c("rank_cat", "rec_or_prox"))
+
+
+```
+
+```{r Divided By Subject}
+alpha_male_df <- subset(rank.cat.data.merged, rank_cat == 1)
+
+alpha_male_run_graph <- ggplot(alpha_male_df, aes(x = subject, y = run_prop, fill = rec_or_prox)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  #facet_wrap(~rec) +
+  theme_bw() +
+  labs(x = "Subject", y = "Proportion of Presses followed by a run") +
+  scale_fill_manual(values = c("0" = "darkgreen", "1" = "lightgreen"), labels = c("No Recipient", "Recipient Present")) +
+  ylim(0, 1) +
+  theme(axis.title.x = element_text(size = 18),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 16),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 12),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = "none",
+        )
+alpha_male_run_graph
+
+#--------------------------------------------------------------------------------------------------------------------------------------
+
+alpha_female_df <- subset(rank.cat.data.merged, rank_cat == 2)
+
+alpha_female_run_graph <- ggplot(alpha_female_df, aes(x = subject, y = run_prop, fill = rec_or_prox)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  #facet_wrap(~rec) +
+  theme_bw() +
+  labs(x = "Subject", y = "Proportion of Presses followed by a run") +
+  scale_fill_manual(values = c("0" = "darkgreen", "1" = "lightgreen"), labels = c("No Recipient", "Recipient Present")) +
+  ylim(0, 1) +
+  theme(axis.title.x = element_text(size = 18),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 16),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 12),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = c(0.85, 0.85),
+        )
+alpha_female_run_graph
+
+# ----------------------------------------------------------------------------------------------------------------------------
+beta_female_df <- subset(rank.cat.data.merged, rank_cat == 3)
+
+beta_female_run_graph <- ggplot(beta_female_df, aes(x = subject, y = run_prop, fill = rec_or_prox)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  #facet_wrap(~rec) +
+  theme_bw() +
+  labs(x = "Subject", y = "Proportion of Presses followed by a run") +
+  scale_fill_manual(values = c("0" = "darkgreen", "1" = "lightgreen"), labels = c("No Recipient", "Recipient Present")) +
+  ylim(0, 1) +
+  theme(axis.title.x = element_text(size = 18),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 16),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 12),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = "none",
+        )
+beta_female_run_graph
+
+#-------------------------------------------------------------------------------------------------------------------------------------
+
+subordinate_df <- subset(rank.cat.data.merged, rank_cat == 4)
+
+subordinate_run_graph <- ggplot(subordinate_df, aes(x = subject, y = run_prop, fill = rec_or_prox)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  #facet_wrap(~rec) +
+  theme_bw() +
+  labs(x = "Subject", y = "Proportion of Presses followed by a run") +
+  scale_fill_manual(values = c("0" = "darkgreen", "1" = "lightgreen"), labels = c("No Recipient", "Recipient Present")) +
+  ylim(0, 1) +
+  theme(axis.title.x = element_text(size = 18),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 16),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 12),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = "none",
+        )
+subordinate_run_graph
+
+rm(alpha_male_df, alpha_female_df, beta_female_df, subordinate_df)
+
+library(gridExtra)
+g_rank_run <- grid.arrange(alpha_male_run_graph, alpha_female_run_graph, beta_female_run_graph, subordinate_run_graph,
+                nrow = 2)
+
+```
+
+```{r Z-center if needed, and make sure Rank is Categorical}
+# Z center numeric variables
+accessible.data$z.rank = as.vector(scale(accessible.data$rank))
+accessible.data$z.pull_number = as.vector(scale(accessible.data$pull_number))
+
+accessible.data$rec_or_prox <- ifelse(accessible.data$recipient_y_n == 0 & accessible.data$proximity_y_n == 0, 0, 1)
+
+accessible.data$rank_cat <- ifelse(accessible.data$rank_score == 1, 1, 4)
+accessible.data$rank_cat <- ifelse(accessible.data$donor == "Ivory" | accessible.data$donor == "Lexi" | accessible.data$donor == "Gambit" | accessible.data$donor == "Scarlett", 2, accessible.data$rank_cat)
+accessible.data$rank_cat <- ifelse(accessible.data$donor == "Ira" | accessible.data$donor == "Lily" | accessible.data$donor == "Nala" | accessible.data$donor == "Beeker", 3, accessible.data$rank_cat)
+
+accessible.data$rank_cat <- as.factor(accessible.data$rank_cat)
+```
+
+```{r Test for Colinearity with VIF}
+simple_model1 <- lm(as.numeric(run) ~ OT + pull_number + rec_or_prox + rank_cat, data = accessible.data)
+
+summary(simple_model1)
+
+vif(simple_model1)
+
+# ALL VIFs should be low, around 1.0 preferably Above 2.5 is concerning
+
+# Rank and Sex should be high because they are colinear together
+```
+
+```{r Run the Model}
+Model_5 <- glmer(run ~  OT + pull_number + rec_or_prox*rank_cat +
+                  (1|donor), 
+                 family = binomial(link='logit'), 
+                 data = accessible.data,
+                 control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun = 10000)))
+
+summary(Model_5)
+
+Anova(Model_5, type = 3)
+
+tab_model(Model_5,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          title = "Logistic Regression Predicting the Likelihood of Running after a Pull")
+```
+
+
+```{r Probe Significant Interaction}
+# First, calculate the estimated marginal means (EMMs) for the interaction
+emm <- emmeans(Model_5, ~ rec_or_prox * rank_cat)
+
+# Perform pairwise comparisons within each level of rank_cat (0 vs 1 for rec_or_prox)
+emm_contrasts <- contrast(emm, method = "revpairwise", adjust = "bonferroni")
+
+# Print the results of the pairwise comparisons
+summary(emm_contrasts)
+```
+
+contrast                                        estimate     SE  df z.ratio p.value
+rec_or_prox1 rank_cat1 - rec_or_prox0 rank_cat1   0.3772 0.0983 Inf   3.836  0.0031
+rec_or_prox1 rank_cat2 - rec_or_prox0 rank_cat2  -1.9933 0.2691 Inf  -7.408  <.0001
+rec_or_prox1 rank_cat3 - rec_or_prox0 rank_cat3  -1.6941 0.1438 Inf -11.780  <.0001
+rec_or_prox1 rank_cat4 - rec_or_prox0 rank_cat4  -3.8370 0.5625 Inf  -6.822  <.0001
+
+Negative value means that running was higher without a recipient than  with recipient
+Positive value means that running was higher with recipient than without a recipient (Alpha Males)
+
+
+
+```{r Null Model Comparison}
+# Random Effects only
+random_effects_only <- glmer(run ~  (1|donor), 
+                 family = binomial(link='logit'), 
+                 data = accessible.data,
+                 control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun = 10000)))
+
+# bobyqa = optimizer To avoid a warning of nonconvergence
+
+summary(random_effects_only)
+
+# Compare the 2 models
+anova(random_effects_only, Model_5, test = "chisq")
+
+```
+
+
+```{r How well does your model classify the data?}
+# Next set up a confusion matrix, which is a technique used in machine learning to test how well your model predicts your data. 
+
+# Run the test data through the model
+res <- predict(Model_5, accessible.data, type = "response")
+
+# Set up a confusion matrix to validate the model
+conf_matrix <- table(Actual_Value = accessible.data$run, Predicted_Value = res > 0.5)
+conf_matrix
+
+# What percent of cases in your data were predicted accurately (as a case or non-case) given your model:
+(conf_matrix[[1,1]] + conf_matrix[[2,2]]) / sum(conf_matrix)
+
+# 68.8% Correct Prediction of Cases
+```
+```{r Check Model Stability}
+source("glmm_stability.r")
+m.stab=glmm.model.stab(model.res=Model_5)
+#m.stab.plot(m.stab$summary[, -1])
+round(m.stab$summary[, -1], 3)
+m.stab.plot <- round(m.stab$summary[, -1], 3)
+m.stab.plot$variables <- row.names(m.stab.plot)
+m.stab.plot <- subset(m.stab.plot, variables != "(Intercept)")
+m.stab.plot <- subset(m.stab.plot, variables != "donor@(Intercept)@NA")
+
+ggplot(m.stab.plot, aes(x = variables, y = orig)) +
+  geom_pointrange(aes(ymin = min, ymax = max)) +
+  geom_hline(yintercept = 0.0, size = 1, linetype = "solid") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+
+```
+
+
+
+
+
+
