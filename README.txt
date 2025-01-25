@@ -30,8 +30,8 @@ Msc Model 5 - Running [FINAL].RMD
 	This .xlsx file is a trial level data, each line of code represents one lever press
 	This .RMD file generates Figure 5
 
-All demographic files include the subject's rank, sex, and demographic information. We included multiple because one individual's name was spelled two different ways 
-	("Scarlett" and "Scarlet")
+All demographic files include the subject's rank, sex, and demographic information for merging purposes. We included multiple files with the same information
+because one individual's name was spelled two different ways ("Scarlett" and "Scarlet")
 
 Instructions:
 	All .RMD files are separated into chunks and titled with the purpose of the chunk.
