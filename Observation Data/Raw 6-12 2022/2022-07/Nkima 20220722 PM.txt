@@ -1,0 +1,55 @@
+# Date and Time: Jul 22, 2022 1:44:17 PM
+# Observer: sms
+# Estrous: lychee, nala
+# Comments: outside, sunny 88
+# Fed: Yes
+# Food in Enclosure: No
+# Group: NKIMA
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:00 Nkima Locomote
+00:06 Nala Locomote
+00:12 Gambit Forage
+00:16 Lychee Locomote
+03:03 Nkima Locomote
+03:06 Nala Locomote
+03:12 Gambit Locomote
+03:15 Lychee Locomote
+06:03 Nkima Locomote
+06:09 Nala Locomote
+06:13 Gambit Solo-Feed
+06:20 Lychee Locomote
+09:03 Nkima Inactive
+09:10 Nala Locomote
+09:16 Gambit Forage
+09:21 Lychee Solo-Feed
+12:03 Nkima Locomote
+12:07 Nala Locomote
+12:10 Gambit Locomote
+12:17 Lychee Forage
+15:02 Nkima Locomote
+15:06 Nala Inactive
+15:11 Gambit Proximity Nkima
+15:15 Lychee Solo-Feed
+18:05 Nkima Inactive
+18:28 Nala Locomote
+18:30 Gambit Inactive
+18:33 Lychee Locomote
+21:05 Nkima Locomote
+21:33 Nala Locomote
+21:36 Gambit Inactive
+21:39 Lychee Locomote
+24:01 Nkima Locomote
+24:07 Nala Solo-Feed
+24:19 Gambit Locomote
+24:25 Lychee Locomote
+25:11 Lychee Sexual* Inter-G
+27:02 Nkima Locomote
+27:06 Nala Solo-Feed
+27:15 Gambit Solo-Feed
+27:18 Lychee Locomote
+30:02 Nkima Solo-Feed
+30:08 Nala Inactive
+30:17 Gambit Solo-Feed
+30:21 Lychee Locomote

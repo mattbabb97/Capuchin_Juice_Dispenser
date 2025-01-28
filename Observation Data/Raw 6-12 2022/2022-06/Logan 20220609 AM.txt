@@ -1,0 +1,104 @@
+# Date and Time: Jun 9, 2022 8:31:32 AM
+# Observer: sm
+# Estrous: 
+# Comments: inside am, heaven here
+# Fed: No
+# Food in Enclosure: No
+# Group: LOGAN
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:01 Logan Inactive
+00:07 Ivory Locomote
+00:18 Ira Proximity Ingrid
+00:24 Irene Locomote
+00:26 Paddy Proximity Ingrid
+00:31 Ingrid Proximity Paddy
+03:13 Logan Contact Ivory Ira
+03:21 Groom Logan
+03:23 Ivory Proximity Ira
+03:24 Ira Groom Logan
+03:28 Ira Proximity Ivory
+03:33 Irene Locomote
+03:47 Paddy Proximity Logan Ivory Ira
+03:51 Ingrid Locomote
+06:16 Logan Contact Ira Ingrid
+06:31 Logan Proximity Ivory
+06:33 Ivory Proximity Ingrid Ira
+06:38 Ira Contact
+06:41 Ira Proximity Ivory Ingrid
+06:46 Irene Groom Paddy
+06:51 Paddy Contact Irene
+06:55 Ingrid Groom Logan
+06:58 Ingrid Proximity Ivory Ira
+09:10 Logan Contact Ivory Ira
+09:19 Logan Proximity Ingrid
+09:24 Ivory Contact Ira
+09:27 Ivory Proximity Ingrid Logan
+09:34 Ira Contact Ivory Logan
+09:41 Ira Proximity Ingrid
+09:43 Irene Inactive
+09:48 Paddy Contact Logan
+09:54 Paddy Proximity Ingrid Ivory Ira
+09:59 Ingrid Contact Logan
+10:07 Ingrid Proximity Ivory Ira Paddy
+12:12 Logan Contact Ivory Ira Ingrid
+12:20 Logan Proximity Paddy
+12:22 Ivory Groom Logan
+12:24 Ivory Contact Ingrid Ira
+12:28 Ivory Proximity Paddy
+12:37 Ira Groom Logan
+12:41 Ira Contact Ivory
+12:44 Ira Proximity Ingrid
+12:46 Irene Inactive
+12:49 Paddy Locomote
+12:52 Ingrid Groom Logan
+12:55 Ingrid Proximity Ivory
+13:03 Ingrid Contact Ira
+18:17 Logan Contact Ingrid
+18:20 Proximity Ivory Ira Paddy
+18:33 Ivory Contact Paddy Ingrid
+18:45 Ivory Proximity Logan Ira
+18:52 Ira Groom Ivory
+19:00 Ira Contact Logan
+19:06 Ira Proximity Ingrid Paddy
+19:10 Irene Inactive
+19:16 Paddy Contact Ivory
+19:21 Paddy Proximity Logan Ingrid Ira
+19:26 Ingrid Contact Logan Ivory Ira Paddy
+21:09 Logan Contact Ira
+21:13 Logan Proximity Ingrid Paddy Ivory
+21:27 Ivory Contact Ingrid Paddy
+21:35 Ivory Proximity Logan
+21:39 Ira Groom Ivory
+21:41 Ira Contact Logan
+22:18 Ira Proximity Paddy
+22:26 Irene Inactive
+22:31 Paddy Groom Ivory
+22:37 Paddy Proximity Ira Logan
+22:43 Ingrid Locomote
+24:11 Logan Contact Ira
+24:17 Logan Proximity Ingrid Ivory Paddy
+24:31 Ivory Contact Paddy Ira Logan
+24:48 Ivory Proximity Ingrid
+24:53 Ira Contact Ivory Paddy Logan
+25:14 Ira Proximity Ingrid
+25:18 Irene Manipulate
+25:25 Paddy Groom Ivory
+25:31 Paddy Contact Ira
+25:34 Paddy Proximity Ingrid Logan
+25:38 Ingrid Proximity Logan Paddy Ira Ivory
+27:11 Logan Contact Ingrid
+27:20 Ivory Contact Paddy
+27:25 Ira Locomote
+27:27 Irene Inactive
+27:31 Paddy Groom Ivory
+27:34 Paddy Proximity Ingrid
+27:47 Ingrid Groom Ira
+30:03 Logan Proximity Ingrid
+30:35 Ivory Contact Ingrid Ira
+30:44 Ira Groom Ivory
+30:48 Ira Proximity Ingrid
+30:51 Irene Inactive
+30:53 Paddy Proximity Logan
+30:59 Ingrid Contact Ivory Ira

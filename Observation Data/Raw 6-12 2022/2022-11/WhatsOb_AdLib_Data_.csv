@@ -1,0 +1,7 @@
+ObID,Group,Date,AMPM,Scan,TimeInSec,IndividualA,Behavior,IndividualB,IndividualC,IndividualD,IndividualE
+G_Gri20221102PM,Griffin,2022-11-02,PM,9,1510,Gambit,Submissive,Nala,,,
+G_Mas20221104PM,Mason,2022-11-04,PM,7,1135,Mason,Aggress,Inter-G,,,
+G_Mas20221104PM,Mason,2022-11-04,PM,7,1233,Gonzo,Sexual,Inter-G,,,
+G_Mas20221104PM,Mason,2022-11-04,PM,9,1478,Benny,Aggress,Inter-G,,,
+G_Mas20221104PM,Mason,2022-11-04,PM,9,1483,Scarlett,Aggress,Inter-G,,,
+G_Mas20221104PM,Mason,2022-11-04,PM,10,1761,Benny,Aggress,Inter-G,,,

@@ -1,0 +1,102 @@
+# Date and Time: Oct 27, 2022 8:31:46 AM
+# Observer: mhb, ag
+# Estrous: 
+# Comments: 
+# Fed: No
+# Food in Enclosure: No
+# Group: MASON
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:16 Mason Locomote
+00:22 Scarlett Inactive
+00:25 Benny Locomote
+00:30 Bias Contact Bailey
+00:33 Bailey Contact Bias
+00:39 Beeker
+00:52 Gonzo Manipulate
+01:00 Gretel Inactive
+03:03 Mason Inactive
+03:10 Scarlett Inactive
+03:23 Benny Proximity Beeker
+03:33 Bias Inactive
+03:42 Bailey Locomote
+03:53 Beeker Locomote
+03:59 Gonzo Groom Gonzo
+04:05 Gretel Locomote
+06:13 Mason Locomote
+06:30 Scarlett Manipulate
+06:38 Benny Inactive
+06:43 Bias Inactive
+06:58 Bailey Locomote
+07:10 Beeker Locomote
+07:23 Gonzo Solo-Feed
+07:36 Gretel Locomote
+09:15 Mason Groom Bailey
+09:21 Mason Proximity Benny
+09:33 Scarlett Inactive
+09:36 Benny Contact Mason
+09:45 Bias
+09:53 Bailey Proximity Mason
+10:04 Beeker Inactive
+10:09 Gonzo Groom Gretel
+10:11 Gretel Contact Gonzo
+12:10 Mason Contact Benny
+12:24 Scarlett Inactive
+12:28 Benny Contact Mason
+12:31 Bias Inactive
+12:49 Bailey Inactive
+12:58 Beeker
+13:30 Gonzo Contact Mason
+13:34 Gonzo Proximity Benny
+13:40 Gretel Groom Gretel
+15:03 Mason Groom Gonzo
+15:09 Scarlett Inactive
+15:16 Benny Inactive
+15:21 Bias Locomote
+15:28 Bailey
+15:40 Beeker Locomote
+15:43 Gonzo Contact Mason
+15:56 Gretel Proximity Bailey
+18:01 Mason Groom Gonzo
+18:04 Scarlett Inactive
+18:14 Benny Inactive
+18:15 Bias Inactive
+18:18 Bailey Groom Gretel
+18:20 Beeker Inactive
+18:23 Gonzo Contact Mason
+18:26 Gretel Contact Bailey
+21:01 Mason Groom Gonzo
+21:14 Scarlett Inactive
+21:23 Benny Inactive
+21:25 Bias Inactive
+21:37 Bailey Inactive
+21:52 Beeker Inactive
+21:56 Gonzo Contact Mason
+22:04 Gretel Inactive
+24:01 Mason Groom Gonzo
+24:06 Scarlett Locomote
+24:11 Benny Contact Bias
+24:13 Bias Groom Benny
+24:17 Bailey Locomote
+24:23 Beeker Locomote
+24:24 Gonzo Contact Mason
+24:26 Gretel Inactive
+27:03 Mason Contact Gonzo
+27:09 Scarlett Manipulate
+27:18 Benny Contact Bias Beeker
+27:23 Bias Groom Benny
+27:27 Bias Proximity Beeker
+27:32 Bailey Locomote
+27:33 Beeker Groom Benny
+27:36 Beeker Proximity Bias
+27:41 Gonzo Groom Mason
+27:45 Gretel Inactive
+30:02 Mason Contact Gonzo
+30:22 Scarlett Solo-Feed
+30:30 Benny Inactive
+30:33 Bias Inactive
+30:38 Bailey Inactive
+30:41 Beeker Locomote
+30:45 Gonzo Contact Mason
+30:51 Gretel Solo-Feed

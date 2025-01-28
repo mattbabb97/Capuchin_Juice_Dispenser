@@ -1,0 +1,2679 @@
+---
+title: "Group Prosociality with OT"
+output: word_document
+date: "2022-09-19"
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Install your Packages}
+#install.packages("rstudioapi")
+#install.packages("openxlsx")
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("tidyverse")
+#install.packages("pscl")
+#install.packages("multcomp")
+#install.packages("lsmeans")
+#install.packages("fitdistrplus")
+#install.packages("glmmTMB")
+#install.packages("overdisp")
+#install.packages("sjPlot")
+#install.packages("Rmisc")
+```
+
+```{r Library your Packages}
+library(rstudioapi)
+library(openxlsx)
+library(readxl)
+library(dplyr)
+library(plyr)
+library(tidyr)
+library(tidyverse)
+library(pscl)
+library(multcomp)
+library(emmeans)
+library(lsmeans)
+library(fitdistrplus)
+library(lme4)
+library(car)
+library(glmmTMB)
+library(emmeans)
+library(overdisp)
+library(sjPlot)
+library(Rmisc)
+
+```
+
+
+```{r Compile your Data Files}
+# Find the File Path for the R Script
+current_path <- getActiveDocumentContext()$path 
+# Set the working directory to that File Path:
+setwd(dirname(current_path))
+# Check the Working Directory (WD)
+print(getwd())
+
+# Search WD for csv files
+file_list  <- list.files(pattern = '\\.csv')
+
+# Put the files as tables
+raw_datasets <- lapply(file_list, read.csv, header = TRUE)
+
+# rbind files into one master dataset - removing all rows where the header reappears within a session (so, where the "subject" column says "subject")
+obs.data <- do.call(rbind , raw_datasets)
+obs.data <- subset(obs.data, ObID != "ObID")
+obs.data <- subset(obs.data, IndividualB != "IndividualB")
+head(obs.data)
+
+obs.data <- subset(obs.data, select = c (2, 3, 5, 7:9))
+
+obs.data <- subset(obs.data, Group != "Gabe")
+
+# Only look at social behaviors and remove all rows with nothing in IndividualB
+obs.data <- subset(obs.data, IndividualB != "")
+
+# Only look at social behaviors within the group, remove all rows with "Inter-G"
+obs.data <- subset(obs.data, IndividualB != "Inter-G")
+
+obs.data <- subset(obs.data, Behavior == "Contact" | Behavior == "Proximity" | Behavior == "Groom" | 
+                     Behavior == "Contact-Feed" | Behavior == "Proximity-Feed")
+```
+
+```{r Griffin's Group}
+subject <- c("Griffin", "Griffin", "Griffin", "Griffin")
+partner <- c("Lily", "Lexi", "Wren", "Widget")
+
+dyads <- c("Griffin_Lily", "Griffin_Lexi", "Griffin_Wren", "Griffin_Widget", "Lily_Lexi", "Lily_Wren", 
+          "Lily_Widget", "Lexi_Wren", "Lexi_Widget", "Wren_Widget")
+```
+
+
+```{r Behavior: Contact}
+# Calculate Counts between all dyads first
+
+# Behavior: Contact
+
+tempdata1 <- subset(obs.data, IndividualA == "Griffin" & Behavior == "Contact")
+
+griffin_lily_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+griffin_lexi_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+griffin_wren_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+griffin_widget_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lily" & Behavior == "Contact")
+
+lily_griffin_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lily_lexi_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+lily_wren_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lily_widget_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lexi" & Behavior == "Contact")
+
+lexi_griffin_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lexi_lily_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+lexi_wren_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lexi_widget_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Wren" & Behavior == "Contact")
+
+wren_griffin_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+wren_lily_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+wren_lexi_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+wren_widget_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Widget" & Behavior == "Contact")
+
+widget_griffin_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+widget_lily_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+widget_lexi_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+widget_wren_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+
+
+# Now sum between dyads
+dyad_1 <- griffin_lily_contact + lily_griffin_contact
+dyad_2 <- griffin_lexi_contact + lexi_griffin_contact
+dyad_3 <- griffin_wren_contact + wren_griffin_contact
+dyad_4 <- griffin_widget_contact + widget_griffin_contact
+dyad_5 <- lily_lexi_contact + lexi_lily_contact
+dyad_6 <- lily_wren_contact + wren_lily_contact
+dyad_7 <- lily_widget_contact + widget_lily_contact
+dyad_8 <- lexi_wren_contact + wren_lexi_contact
+dyad_9 <- lexi_widget_contact + widget_lexi_contact
+dyad_10 <- wren_widget_contact + widget_wren_contact
+
+mean(c(dyad_1, dyad_2 , dyad_3 , dyad_4 , dyad_5 , dyad_6 , dyad_7 , dyad_8 , dyad_9 , dyad_10))
+
+fbx_grif_lily <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_lexi <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_wren <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_widget <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_lexi <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_wren <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_widget <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lexi_wren <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + dyad_9 + dyad_10) / 9)
+fbx_lexi_widget <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_1 + dyad_10) / 9)
+fbx_wren_widget <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_1) / 9)
+
+fbx_contact <- c(fbx_grif_lily, fbx_grif_lexi, fbx_grif_wren, fbx_grif_widget, fbx_lily_lexi, fbx_lily_wren, 
+                 fbx_lily_widget, fbx_lexi_wren, fbx_lexi_widget, fbx_wren_widget)
+
+griffin.data.frame <- data.frame(dyads, fbx_contact)
+
+```
+
+```{r Behavior: Grooming}
+tempdata1 <- subset(obs.data, IndividualA == "Griffin" & Behavior == "Groom")
+
+griffin_lily_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+griffin_lexi_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+griffin_wren_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+griffin_widget_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lily" & Behavior == "Groom")
+
+lily_griffin_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lily_lexi_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+lily_wren_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lily_widget_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lexi" & Behavior == "Groom")
+
+lexi_griffin_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lexi_lily_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+lexi_wren_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lexi_widget_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Wren" & Behavior == "Groom")
+
+wren_griffin_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+wren_lily_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+wren_lexi_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+wren_widget_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Widget" & Behavior == "Groom")
+
+widget_griffin_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+widget_lily_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+widget_lexi_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+widget_wren_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+
+
+# Now sum between dyads
+dyad_1 <- griffin_lily_groom + lily_griffin_groom
+dyad_2 <- griffin_lexi_groom + lexi_griffin_groom
+dyad_3 <- griffin_wren_groom + wren_griffin_groom
+dyad_4 <- griffin_widget_groom + widget_griffin_groom
+dyad_5 <- lily_lexi_groom + lexi_lily_groom
+dyad_6 <- lily_wren_groom + wren_lily_groom
+dyad_7 <- lily_widget_groom + widget_lily_groom
+dyad_8 <- lexi_wren_groom + wren_lexi_groom
+dyad_9 <- lexi_widget_groom + widget_lexi_groom
+dyad_10 <- wren_widget_groom + widget_wren_groom
+
+# This must output greater than 2. Behaviors with a mean raw count less than 2 should be dropped from analysis
+# This helps avoid one dyad who did one behavior once from skewing the data 
+mean(c(dyad_1, dyad_2 , dyad_3 , dyad_4 , dyad_5 , dyad_6 , dyad_7 , dyad_8 , dyad_9 , dyad_10))
+
+fbx_grif_lily <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_lexi <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_wren <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_widget <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_lexi <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_wren <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_widget <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lexi_wren <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + dyad_9 + dyad_10) / 9)
+fbx_lexi_widget <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_1 + dyad_10) / 9)
+fbx_wren_widget <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_1) / 9)
+
+fbx_groom <- c(fbx_grif_lily, fbx_grif_lexi, fbx_grif_wren, fbx_grif_widget, fbx_lily_lexi, fbx_lily_wren, 
+                 fbx_lily_widget, fbx_lexi_wren, fbx_lexi_widget, fbx_wren_widget)
+
+griffin.data.frame$fbx_groom <- fbx_groom
+```
+
+```{r Behavior: Proximity}
+tempdata1 <- subset(obs.data, IndividualA == "Griffin" & Behavior == "Proximity")
+
+griffin_lily_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+griffin_lexi_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+griffin_wren_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+griffin_widget_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lily" & Behavior == "Proximity")
+
+lily_griffin_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lily_lexi_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+lily_wren_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lily_widget_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lexi" & Behavior == "Proximity")
+
+lexi_griffin_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lexi_lily_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+lexi_wren_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lexi_widget_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Wren" & Behavior == "Proximity")
+
+wren_griffin_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+wren_lily_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+wren_lexi_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+wren_widget_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Widget" & Behavior == "Proximity")
+
+widget_griffin_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+widget_lily_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+widget_lexi_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+widget_wren_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+
+
+# Now sum between dyads
+dyad_1 <- griffin_lily_prox + lily_griffin_prox
+dyad_2 <- griffin_lexi_prox + lexi_griffin_prox
+dyad_3 <- griffin_wren_prox + wren_griffin_prox
+dyad_4 <- griffin_widget_prox + widget_griffin_prox
+dyad_5 <- lily_lexi_prox + lexi_lily_prox
+dyad_6 <- lily_wren_prox + wren_lily_prox
+dyad_7 <- lily_widget_prox + widget_lily_prox
+dyad_8 <- lexi_wren_prox + wren_lexi_prox
+dyad_9 <- lexi_widget_prox + widget_lexi_prox
+dyad_10 <- wren_widget_prox + widget_wren_prox
+
+# This must output greater than 2. Behaviors with a mean raw count less than 2 should be dropped from analysis
+# This helps avoid one dyad who did one behavior once from skewing the data 
+mean(c(dyad_1, dyad_2 , dyad_3 , dyad_4 , dyad_5 , dyad_6 , dyad_7 , dyad_8 , dyad_9 , dyad_10))
+# Mean = 52
+
+fbx_grif_lily <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_lexi <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_wren <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_widget <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_lexi <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_wren <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_widget <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lexi_wren <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + dyad_9 + dyad_10) / 9)
+fbx_lexi_widget <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_1 + dyad_10) / 9)
+fbx_wren_widget <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_1) / 9)
+
+fbx_prox <- c(fbx_grif_lily, fbx_grif_lexi, fbx_grif_wren, fbx_grif_widget, fbx_lily_lexi, fbx_lily_wren, 
+                 fbx_lily_widget, fbx_lexi_wren, fbx_lexi_widget, fbx_wren_widget)
+
+griffin.data.frame$fbx_prox <- fbx_prox
+```
+
+```{r Behavior: Contact Feed}
+tempdata1 <- subset(obs.data, IndividualA == "Griffin" & Behavior == "Contact-Feed")
+
+griffin_lily_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+griffin_lexi_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+griffin_wren_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+griffin_widget_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lily" & Behavior == "Contact-Feed")
+
+lily_griffin_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lily_lexi_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+lily_wren_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lily_widget_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lexi" & Behavior == "Contact-Feed")
+
+lexi_griffin_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lexi_lily_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+lexi_wren_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lexi_widget_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Wren" & Behavior == "Contact-Feed")
+
+wren_griffin_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+wren_lily_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+wren_lexi_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+wren_widget_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Widget" & Behavior == "Contact-Feed")
+
+widget_griffin_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+widget_lily_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+widget_lexi_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+widget_wren_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+
+
+# Now sum between dyads
+dyad_1 <- griffin_lily_cont_feed + lily_griffin_cont_feed
+dyad_2 <- griffin_lexi_cont_feed + lexi_griffin_cont_feed
+dyad_3 <- griffin_wren_cont_feed + wren_griffin_cont_feed
+dyad_4 <- griffin_widget_cont_feed + widget_griffin_cont_feed
+dyad_5 <- lily_lexi_cont_feed + lexi_lily_cont_feed
+dyad_6 <- lily_wren_cont_feed + wren_lily_cont_feed
+dyad_7 <- lily_widget_cont_feed + widget_lily_cont_feed
+dyad_8 <- lexi_wren_cont_feed + wren_lexi_cont_feed
+dyad_9 <- lexi_widget_cont_feed + widget_lexi_cont_feed
+dyad_10 <- wren_widget_cont_feed + widget_wren_cont_feed
+
+# This must output greater than 2. Behaviors with a mean raw count less than 2 should be dropped from analysis
+# This helps avoid one dyad who did one behavior once from skewing the data 
+mean(c(dyad_1, dyad_2 , dyad_3 , dyad_4 , dyad_5 , dyad_6 , dyad_7 , dyad_8 , dyad_9 , dyad_10))
+# Mean = 4
+# ** Consider removing **
+
+fbx_grif_lily <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_lexi <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_wren <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_widget <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_lexi <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_wren <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_widget <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lexi_wren <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + dyad_9 + dyad_10) / 9)
+fbx_lexi_widget <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_1 + dyad_10) / 9)
+fbx_wren_widget <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_1) / 9)
+
+fbx_cont_feed <- c(fbx_grif_lily, fbx_grif_lexi, fbx_grif_wren, fbx_grif_widget, fbx_lily_lexi, fbx_lily_wren, 
+                 fbx_lily_widget, fbx_lexi_wren, fbx_lexi_widget, fbx_wren_widget)
+
+griffin.data.frame$fbx_cont_feed <- fbx_cont_feed
+```
+
+
+```{r Behavior: Proximity-Feed}
+tempdata1 <- subset(obs.data, IndividualA == "Griffin" & Behavior == "Proximity-Feed")
+
+griffin_lily_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+griffin_lexi_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+griffin_wren_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+griffin_widget_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lily" & Behavior == "Proximity-Feed")
+
+lily_griffin_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lily_lexi_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+lily_wren_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lily_widget_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lexi" & Behavior == "Proximity-Feed")
+
+lexi_griffin_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+lexi_lily_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+lexi_wren_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+lexi_widget_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Wren" & Behavior == "Proximity-Feed")
+
+wren_griffin_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+wren_lily_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+wren_lexi_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+wren_widget_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Widget"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Widget" & Behavior == "Proximity-Feed")
+
+widget_griffin_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Griffin"))))
+widget_lily_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lily"))))
+widget_lexi_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lexi"))))
+widget_wren_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Wren"))))
+
+
+# Now sum between dyads
+dyad_1 <- griffin_lily_prox_feed + lily_griffin_prox_feed
+dyad_2 <- griffin_lexi_prox_feed + lexi_griffin_prox_feed
+dyad_3 <- griffin_wren_prox_feed + wren_griffin_prox_feed
+dyad_4 <- griffin_widget_prox_feed + widget_griffin_prox_feed
+dyad_5 <- lily_lexi_prox_feed + lexi_lily_prox_feed
+dyad_6 <- lily_wren_prox_feed + wren_lily_prox_feed
+dyad_7 <- lily_widget_prox_feed + widget_lily_prox_feed
+dyad_8 <- lexi_wren_prox_feed + wren_lexi_prox_feed
+dyad_9 <- lexi_widget_prox_feed + widget_lexi_prox_feed
+dyad_10 <- wren_widget_prox_feed + widget_wren_prox_feed
+
+# This must output greater than 2. Behaviors with a mean raw count less than 2 should be dropped from analysis
+# This helps avoid one dyad who did one behavior once from skewing the data 
+mean(c(dyad_1, dyad_2 , dyad_3 , dyad_4 , dyad_5 , dyad_6 , dyad_7 , dyad_8 , dyad_9 , dyad_10))
+# Mean = 4
+# ** Consider removing **
+
+fbx_grif_lily <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_lexi <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_wren <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_grif_widget <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_lexi <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_wren <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lily_widget <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + dyad_9 + dyad_10) / 9)
+fbx_lexi_wren <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + dyad_9 + dyad_10) / 9)
+fbx_lexi_widget <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_1 + dyad_10) / 9)
+fbx_wren_widget <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + dyad_9 + dyad_1) / 9)
+
+fbx_prox_feed <- c(fbx_grif_lily, fbx_grif_lexi, fbx_grif_wren, fbx_grif_widget, fbx_lily_lexi, fbx_lily_wren, 
+                 fbx_lily_widget, fbx_lexi_wren, fbx_lexi_widget, fbx_wren_widget)
+
+griffin.data.frame$fbx_prox_feed <- fbx_prox_feed
+```
+```{r Calculate CSI}
+# Remove fbx_cont_feed because of infrequency 
+griffin.data.frame$CSI <- with(griffin.data.frame, (fbx_contact + fbx_prox + fbx_groom + fbx_prox_feed)/ 4)
+
+mean(griffin.data.frame$CSI)
+median(griffin.data.frame$CSI)
+
+```
+Logan's Group ------------------------------------------------------------------------------------------------------------------------
+
+```{r}
+dyads <- c("Logan_Ivory", "Logan_Ira", "Logan_Paddy", "Logan_Ingrid", "Logan_Irene", "Ivory_Ira", "Ivory_Paddy", 
+          "Ivory_Ingrid", "Ivory_Irene", "Ira_Paddy", "Ira_Ingrid", "Ira_Irene", "Paddy_Ingrid", "Paddy_Irene", "Ingrid_Irene")
+```
+
+
+```{r Behavior: Contact}
+# Replace names with generic identifiers
+tempdata1 <- subset(obs.data, IndividualA == "Logan" & Behavior == "Contact")
+
+indiv_1_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_1_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_1_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_1_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_1_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ivory" & Behavior == "Contact")
+
+indiv_2_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_2_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_2_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_2_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_2_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ira" & Behavior == "Contact")
+
+indiv_3_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_3_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_3_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_3_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_3_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Paddy" & Behavior == "Contact")
+
+indiv_4_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_4_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_4_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_4_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_4_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ingrid" & Behavior == "Contact")
+
+indiv_5_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_5_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_5_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_5_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_5_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Irene" & Behavior == "Contact")
+
+indiv_6_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_6_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_6_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_6_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_6_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_contact + indiv_2_indiv_1_contact
+dyad_2 <- indiv_1_indiv_3_contact + indiv_3_indiv_1_contact
+dyad_3 <- indiv_1_indiv_4_contact + indiv_4_indiv_1_contact
+dyad_4 <- indiv_1_indiv_5_contact + indiv_5_indiv_1_contact
+dyad_5 <- indiv_1_indiv_6_contact + indiv_6_indiv_1_contact
+dyad_6 <- indiv_2_indiv_3_contact + indiv_3_indiv_2_contact
+dyad_7 <- indiv_2_indiv_4_contact + indiv_4_indiv_2_contact
+dyad_8 <- indiv_2_indiv_5_contact + indiv_5_indiv_2_contact
+dyad_9 <- indiv_2_indiv_6_contact + indiv_6_indiv_2_contact
+dyad_10 <- indiv_3_indiv_4_contact + indiv_4_indiv_3_contact
+dyad_11 <- indiv_3_indiv_5_contact + indiv_5_indiv_3_contact
+dyad_12 <- indiv_3_indiv_6_contact + indiv_6_indiv_3_contact
+dyad_13 <- indiv_4_indiv_5_contact + indiv_5_indiv_4_contact
+dyad_14 <- indiv_4_indiv_6_contact + indiv_6_indiv_4_contact
+dyad_15 <- indiv_5_indiv_6_contact + indiv_6_indiv_5_contact
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, dyad_11, dyad_12, dyad_13, dyad_14, dyad_15))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_7 <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_8 <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_9 <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_1 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_10 <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_1 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_11 <- dyad_11 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_1 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_12 <- dyad_12 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_1 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_13 <- dyad_13 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_1 + dyad_14 + dyad_15) / 14)
+fbx_dyad_14 <- dyad_14 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_1 + dyad_15) / 14)
+fbx_dyad_15 <- dyad_15 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_1) / 14)
+
+fbx_contact <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, fbx_dyad_15)
+
+
+logan.data.frame <- data.frame(dyads, fbx_contact)
+
+```
+
+```{r Behavior: Grooming}
+tempdata1 <- subset(obs.data, IndividualA == "Logan" & Behavior == "Groom")
+
+indiv_1_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_1_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_1_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_1_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_1_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ivory" & Behavior == "Groom")
+
+indiv_2_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_2_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_2_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_2_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_2_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ira" & Behavior == "Groom")
+
+indiv_3_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_3_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_3_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_3_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_3_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Paddy" & Behavior == "Groom")
+
+indiv_4_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_4_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_4_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_4_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_4_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ingrid" & Behavior == "Groom")
+
+indiv_5_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_5_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_5_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_5_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_5_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Irene" & Behavior == "Groom")
+
+indiv_6_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_6_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_6_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_6_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_6_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_groom + indiv_2_indiv_1_groom
+dyad_2 <- indiv_1_indiv_3_groom + indiv_3_indiv_1_groom
+dyad_3 <- indiv_1_indiv_4_groom + indiv_4_indiv_1_groom
+dyad_4 <- indiv_1_indiv_5_groom + indiv_5_indiv_1_groom
+dyad_5 <- indiv_1_indiv_6_groom + indiv_6_indiv_1_groom
+dyad_6 <- indiv_2_indiv_3_groom + indiv_3_indiv_2_groom
+dyad_7 <- indiv_2_indiv_4_groom + indiv_4_indiv_2_groom
+dyad_8 <- indiv_2_indiv_5_groom + indiv_5_indiv_2_groom
+dyad_9 <- indiv_2_indiv_6_groom + indiv_6_indiv_2_groom
+dyad_10 <- indiv_3_indiv_4_groom + indiv_4_indiv_3_groom
+dyad_11 <- indiv_3_indiv_5_groom + indiv_5_indiv_3_groom
+dyad_12 <- indiv_3_indiv_6_groom + indiv_6_indiv_3_groom
+dyad_13 <- indiv_4_indiv_5_groom + indiv_5_indiv_4_groom
+dyad_14 <- indiv_4_indiv_6_groom + indiv_6_indiv_4_groom
+dyad_15 <- indiv_5_indiv_6_groom + indiv_6_indiv_5_groom
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, dyad_11, dyad_12, dyad_13, dyad_14, dyad_15))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_7 <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_8 <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_9 <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_1 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_10 <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_1 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_11 <- dyad_11 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_1 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_12 <- dyad_12 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_1 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_13 <- dyad_13 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_1 + dyad_14 + dyad_15) / 14)
+fbx_dyad_14 <- dyad_14 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_1 + dyad_15) / 14)
+fbx_dyad_15 <- dyad_15 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_1) / 14)
+
+fbx_groom <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, fbx_dyad_15)
+
+
+logan.data.frame$fbx_groom <- fbx_groom
+```
+
+```{r Behavior: Proximity}
+
+tempdata1 <- subset(obs.data, IndividualA == "Logan" & Behavior == "Proximity")
+
+indiv_1_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_1_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_1_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_1_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_1_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ivory" & Behavior == "Proximity")
+
+indiv_2_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_2_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_2_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_2_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_2_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ira" & Behavior == "Proximity")
+
+indiv_3_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_3_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_3_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_3_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_3_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Paddy" & Behavior == "Proximity")
+
+indiv_4_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_4_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_4_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_4_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_4_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ingrid" & Behavior == "Proximity")
+
+indiv_5_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_5_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_5_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_5_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_5_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Irene" & Behavior == "Proximity")
+
+indiv_6_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_6_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_6_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_6_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_6_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_prox + indiv_2_indiv_1_prox
+dyad_2 <- indiv_1_indiv_3_prox + indiv_3_indiv_1_prox
+dyad_3 <- indiv_1_indiv_4_prox + indiv_4_indiv_1_prox
+dyad_4 <- indiv_1_indiv_5_prox + indiv_5_indiv_1_prox
+dyad_5 <- indiv_1_indiv_6_prox + indiv_6_indiv_1_prox
+dyad_6 <- indiv_2_indiv_3_prox + indiv_3_indiv_2_prox
+dyad_7 <- indiv_2_indiv_4_prox + indiv_4_indiv_2_prox
+dyad_8 <- indiv_2_indiv_5_prox + indiv_5_indiv_2_prox
+dyad_9 <- indiv_2_indiv_6_prox + indiv_6_indiv_2_prox
+dyad_10 <- indiv_3_indiv_4_prox + indiv_4_indiv_3_prox
+dyad_11 <- indiv_3_indiv_5_prox + indiv_5_indiv_3_prox
+dyad_12 <- indiv_3_indiv_6_prox + indiv_6_indiv_3_prox
+dyad_13 <- indiv_4_indiv_5_prox + indiv_5_indiv_4_prox
+dyad_14 <- indiv_4_indiv_6_prox + indiv_6_indiv_4_prox
+dyad_15 <- indiv_5_indiv_6_prox + indiv_6_indiv_5_prox
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, dyad_11, dyad_12, dyad_13, dyad_14, dyad_15))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_7 <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_8 <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_9 <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_1 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_10 <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_1 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_11 <- dyad_11 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_1 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_12 <- dyad_12 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_1 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_13 <- dyad_13 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_1 + dyad_14 + dyad_15) / 14)
+fbx_dyad_14 <- dyad_14 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_1 + dyad_15) / 14)
+fbx_dyad_15 <- dyad_15 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_1) / 14)
+
+fbx_prox <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, fbx_dyad_15)
+
+
+logan.data.frame$fbx_prox <- fbx_prox
+
+```
+```{r Behavior: Contact-Feed}
+tempdata1 <- subset(obs.data, IndividualA == "Logan" & Behavior == "Contact-Feed")
+
+indiv_1_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_1_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_1_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_1_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_1_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ivory" & Behavior == "Contact-Feed")
+
+indiv_2_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_2_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_2_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_2_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_2_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ira" & Behavior == "Contact-Feed")
+
+indiv_3_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_3_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_3_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_3_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_3_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Paddy" & Behavior == "Contact-Feed")
+
+indiv_4_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_4_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_4_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_4_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_4_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ingrid" & Behavior == "Contact-Feed")
+
+indiv_5_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_5_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_5_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_5_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_5_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Irene" & Behavior == "Contact-Feed")
+
+indiv_6_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_6_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_6_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_6_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_6_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_cont_feed + indiv_2_indiv_1_cont_feed
+dyad_2 <- indiv_1_indiv_3_cont_feed + indiv_3_indiv_1_cont_feed
+dyad_3 <- indiv_1_indiv_4_cont_feed + indiv_4_indiv_1_cont_feed
+dyad_4 <- indiv_1_indiv_5_cont_feed + indiv_5_indiv_1_cont_feed
+dyad_5 <- indiv_1_indiv_6_cont_feed + indiv_6_indiv_1_cont_feed
+dyad_6 <- indiv_2_indiv_3_cont_feed + indiv_3_indiv_2_cont_feed
+dyad_7 <- indiv_2_indiv_4_cont_feed + indiv_4_indiv_2_cont_feed
+dyad_8 <- indiv_2_indiv_5_cont_feed + indiv_5_indiv_2_cont_feed
+dyad_9 <- indiv_2_indiv_6_cont_feed + indiv_6_indiv_2_cont_feed
+dyad_10 <- indiv_3_indiv_4_cont_feed + indiv_4_indiv_3_cont_feed
+dyad_11 <- indiv_3_indiv_5_cont_feed + indiv_5_indiv_3_cont_feed
+dyad_12 <- indiv_3_indiv_6_cont_feed + indiv_6_indiv_3_cont_feed
+dyad_13 <- indiv_4_indiv_5_cont_feed + indiv_5_indiv_4_cont_feed
+dyad_14 <- indiv_4_indiv_6_cont_feed + indiv_6_indiv_4_cont_feed
+dyad_15 <- indiv_5_indiv_6_cont_feed + indiv_6_indiv_5_cont_feed
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, dyad_11, dyad_12, dyad_13, dyad_14, dyad_15))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_7 <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_8 <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_9 <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_1 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_10 <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_1 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_11 <- dyad_11 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_1 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_12 <- dyad_12 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_1 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_13 <- dyad_13 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_1 + dyad_14 + dyad_15) / 14)
+fbx_dyad_14 <- dyad_14 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_1 + dyad_15) / 14)
+fbx_dyad_15 <- dyad_15 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_1) / 14)
+
+fbx_cont_feed <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, fbx_dyad_15)
+
+
+logan.data.frame$fbx_cont_feed <- fbx_cont_feed
+```
+
+```{r Behavior: Proximity-Feed}
+tempdata1 <- subset(obs.data, IndividualA == "Logan" & Behavior == "Proximity-Feed")
+
+indiv_1_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_1_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_1_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_1_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_1_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ivory" & Behavior == "Proximity-Feed")
+
+indiv_2_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_2_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_2_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_2_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_2_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ira" & Behavior == "Proximity-Feed")
+
+indiv_3_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_3_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_3_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_3_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_3_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Paddy" & Behavior == "Proximity-Feed")
+
+indiv_4_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_4_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_4_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_4_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+indiv_4_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Ingrid" & Behavior == "Proximity-Feed")
+
+indiv_5_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_5_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_5_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_5_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_5_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Irene"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Irene" & Behavior == "Proximity-Feed")
+
+indiv_6_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Logan"))))
+indiv_6_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ivory"))))
+indiv_6_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ira"))))
+indiv_6_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Paddy"))))
+indiv_6_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Ingrid"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_prox_feed + indiv_2_indiv_1_prox_feed
+dyad_2 <- indiv_1_indiv_3_prox_feed + indiv_3_indiv_1_prox_feed
+dyad_3 <- indiv_1_indiv_4_prox_feed + indiv_4_indiv_1_prox_feed
+dyad_4 <- indiv_1_indiv_5_prox_feed + indiv_5_indiv_1_prox_feed
+dyad_5 <- indiv_1_indiv_6_prox_feed + indiv_6_indiv_1_prox_feed
+dyad_6 <- indiv_2_indiv_3_prox_feed + indiv_3_indiv_2_prox_feed
+dyad_7 <- indiv_2_indiv_4_prox_feed + indiv_4_indiv_2_prox_feed
+dyad_8 <- indiv_2_indiv_5_prox_feed + indiv_5_indiv_2_prox_feed
+dyad_9 <- indiv_2_indiv_6_prox_feed + indiv_6_indiv_2_prox_feed
+dyad_10 <- indiv_3_indiv_4_prox_feed + indiv_4_indiv_3_prox_feed
+dyad_11 <- indiv_3_indiv_5_prox_feed + indiv_5_indiv_3_prox_feed
+dyad_12 <- indiv_3_indiv_6_prox_feed + indiv_6_indiv_3_prox_feed
+dyad_13 <- indiv_4_indiv_5_prox_feed + indiv_5_indiv_4_prox_feed
+dyad_14 <- indiv_4_indiv_6_prox_feed + indiv_6_indiv_4_prox_feed
+dyad_15 <- indiv_5_indiv_6_prox_feed + indiv_6_indiv_5_prox_feed
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, dyad_11, dyad_12, dyad_13, dyad_14, dyad_15))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_7 <- dyad_7 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_1 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_8 <- dyad_8 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_1 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_9 <- dyad_9 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_1 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_10 <- dyad_10 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_1 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_11 <- dyad_11 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_1 + dyad_12 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_12 <- dyad_12 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_1 + dyad_13 + dyad_14 + dyad_15) / 14)
+fbx_dyad_13 <- dyad_13 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_1 + dyad_14 + dyad_15) / 14)
+fbx_dyad_14 <- dyad_14 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_1 + dyad_15) / 14)
+fbx_dyad_15 <- dyad_15 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                           dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_1) / 14)
+
+fbx_prox_feed <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, fbx_dyad_15)
+
+
+logan.data.frame$fbx_prox_feed <- fbx_prox_feed
+```
+
+
+```{r Calculate CSI}
+# Once again contact feed was so infrequent, we removed
+logan.data.frame$CSI <- with(logan.data.frame, (fbx_contact + fbx_prox + fbx_groom + fbx_prox_feed)/ 4)
+
+mean(logan.data.frame$CSI)
+median(logan.data.frame$CSI)
+```
+
+Nkimas Group -------------------------------------------------------------------------------------------------------------------------
+```{r}
+dyads = dyads <- c("Nkima_Nala", "Nkima_Gambit", "Nkima_Lychee", "Nala_Gambit", "Nala_Lychee", "Gambit_Lychee")
+```
+
+```{r Behavior: Contact}
+tempdata1 <- subset(obs.data, IndividualA == "Nkima" & Behavior == "Contact")
+
+indiv_1_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_1_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_1_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Nala" & Behavior == "Contact")
+
+indiv_2_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_2_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_2_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Gambit" & Behavior == "Contact")
+
+indiv_3_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_3_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_3_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Lychee" & Behavior == "Contact")
+
+indiv_4_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_4_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_4_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_contact + indiv_2_indiv_1_contact
+dyad_2 <- indiv_1_indiv_3_contact + indiv_3_indiv_1_contact
+dyad_3 <- indiv_1_indiv_4_contact + indiv_4_indiv_1_contact
+dyad_4 <- indiv_2_indiv_3_contact + indiv_3_indiv_2_contact
+dyad_5 <- indiv_2_indiv_4_contact + indiv_4_indiv_2_contact
+dyad_6 <- indiv_3_indiv_4_contact + indiv_4_indiv_3_contact
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6) / 5)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6) / 5)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1) / 5)
+
+
+fbx_contact <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6)
+
+
+nkima.data.frame <- data.frame(dyads, fbx_contact)
+```
+
+```{r Behavior: Grooming}
+tempdata1 <- subset(obs.data, IndividualA == "Nkima" & Behavior == "Groom")
+
+indiv_1_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_1_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_1_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Nala" & Behavior == "Groom")
+
+indiv_2_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_2_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_2_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gambit" & Behavior == "Groom")
+
+indiv_3_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_3_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_3_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lychee" & Behavior == "Groom")
+
+indiv_4_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_4_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_4_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_groom + indiv_2_indiv_1_groom
+dyad_2 <- indiv_1_indiv_3_groom + indiv_3_indiv_1_groom
+dyad_3 <- indiv_1_indiv_4_groom + indiv_4_indiv_1_groom
+dyad_4 <- indiv_2_indiv_3_groom + indiv_3_indiv_2_groom
+dyad_5 <- indiv_2_indiv_4_groom + indiv_4_indiv_2_groom
+dyad_6 <- indiv_3_indiv_4_groom + indiv_4_indiv_3_groom
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6) / 5)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6) / 5)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1) / 5)
+
+
+fbx_groom <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6)
+
+
+nkima.data.frame$fbx_groom <- fbx_groom
+```
+
+```{r Behavior: Proximity}
+tempdata1 <- subset(obs.data, IndividualA == "Nkima" & Behavior == "Proximity")
+
+indiv_1_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_1_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_1_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Nala" & Behavior == "Proximity")
+
+indiv_2_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_2_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_2_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gambit" & Behavior == "Proximity")
+
+indiv_3_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_3_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_3_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lychee" & Behavior == "Proximity")
+
+indiv_4_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_4_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_4_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_prox + indiv_2_indiv_1_prox
+dyad_2 <- indiv_1_indiv_3_prox + indiv_3_indiv_1_prox
+dyad_3 <- indiv_1_indiv_4_prox + indiv_4_indiv_1_prox
+dyad_4 <- indiv_2_indiv_3_prox + indiv_3_indiv_2_prox
+dyad_5 <- indiv_2_indiv_4_prox + indiv_4_indiv_2_prox
+dyad_6 <- indiv_3_indiv_4_prox + indiv_4_indiv_3_prox
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6) / 5)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6) / 5)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1) / 5)
+
+
+fbx_prox <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6)
+
+
+nkima.data.frame$fbx_prox <- fbx_prox
+```
+
+```{r Behavior: Contact-Feed}
+tempdata1 <- subset(obs.data, IndividualA == "Nkima" & Behavior == "Contact-Feed")
+
+indiv_1_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_1_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_1_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Nala" & Behavior == "Contact-Feed")
+
+indiv_2_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_2_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_2_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gambit" & Behavior == "Contact-Feed")
+
+indiv_3_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_3_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_3_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lychee" & Behavior == "Contact-Feed")
+
+indiv_4_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_4_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_4_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_cont_feed + indiv_2_indiv_1_cont_feed
+dyad_2 <- indiv_1_indiv_3_cont_feed + indiv_3_indiv_1_cont_feed
+dyad_3 <- indiv_1_indiv_4_cont_feed + indiv_4_indiv_1_cont_feed
+dyad_4 <- indiv_2_indiv_3_cont_feed + indiv_3_indiv_2_cont_feed
+dyad_5 <- indiv_2_indiv_4_cont_feed + indiv_4_indiv_2_cont_feed
+dyad_6 <- indiv_3_indiv_4_cont_feed + indiv_4_indiv_3_cont_feed
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6) / 5)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6) / 5)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1) / 5)
+
+
+fbx_cont_feed <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6)
+
+
+nkima.data.frame$fbx_cont_feed <- fbx_cont_feed
+
+
+# Mean = 2, remove from CSI calc
+```
+
+```{r}
+tempdata1 <- subset(obs.data, IndividualA == "Nkima" & Behavior == "Proximity-Feed")
+
+indiv_1_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_1_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_1_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Nala" & Behavior == "Proximity-Feed")
+
+indiv_2_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_2_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+indiv_2_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gambit" & Behavior == "Proximity-Feed")
+
+indiv_3_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_3_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_3_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Lychee"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Lychee" & Behavior == "Proximity-Feed")
+
+indiv_4_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nkima"))))
+indiv_4_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Nala"))))
+indiv_4_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gambit"))))
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_prox_feed + indiv_2_indiv_1_prox_feed
+dyad_2 <- indiv_1_indiv_3_prox_feed + indiv_3_indiv_1_prox_feed
+dyad_3 <- indiv_1_indiv_4_prox_feed + indiv_4_indiv_1_prox_feed
+dyad_4 <- indiv_2_indiv_3_prox_feed + indiv_3_indiv_2_prox_feed
+dyad_5 <- indiv_2_indiv_4_prox_feed + indiv_4_indiv_2_prox_feed
+dyad_6 <- indiv_3_indiv_4_prox_feed + indiv_4_indiv_3_prox_feed
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_3 <- dyad_3 / ((dyad_2 + dyad_1 + dyad_4 + dyad_5 + dyad_6) / 5)
+fbx_dyad_4 <- dyad_4 / ((dyad_2 + dyad_3 + dyad_1 + dyad_5 + dyad_6) / 5)
+fbx_dyad_5 <- dyad_5 / ((dyad_2 + dyad_3 + dyad_4 + dyad_1 + dyad_6) / 5)
+fbx_dyad_6 <- dyad_6 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_1) / 5)
+
+
+fbx_prox_feed <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6)
+
+
+nkima.data.frame$fbx_prox_feed <- fbx_prox_feed
+```
+
+
+```{r Calculate CSI}
+nkima.data.frame$CSI <- with(nkima.data.frame, (fbx_contact + fbx_prox + fbx_groom + fbx_prox_feed)/ 4)
+
+mean(nkima.data.frame$CSI)
+median(nkima.data.frame$CSI)
+```
+
+Mason's Group--------------------------------------------------------------------------------------------------------------------------
+
+```{r}
+dyads <- c(
+  "Mason_Scarlett", "Mason_Beeker", "Mason_Benny", "Mason_Bailey", "Mason_Bias", "Mason_Gonzo", "Mason_Gretel",
+  "Scarlett_Beeker", "Scarlett_Benny", "Scarlett_Bailey", "Scarlett_Bias", "Scarlett_Gonzo", "Scarlett_Gretel",
+  "Beeker_Benny", "Beeker_Bailey", "Beeker_Bias", "Beeker_Gonzo", "Beeker_Gretel",
+  "Benny_Bailey", "Benny_Bias", "Benny_Gonzo", "Benny_Gretel",
+  "Bailey_Bias", "Bailey_Gonzo", "Bailey_Gretel",
+  "Bias_Gonzo", "Bias_Gretel",
+  "Gonzo_Gretel"
+)
+```
+
+
+```{r Behavior: Contact}
+# Replace names with generic identifiers
+tempdata1 <- subset(obs.data, IndividualA == "Mason" & Behavior == "Contact")
+
+indiv_1_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_1_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_1_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_1_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_1_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_1_indiv_7_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_1_indiv_8_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Scarlett" & Behavior == "Contact")
+
+indiv_2_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_2_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_2_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_2_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_2_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_2_indiv_7_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_2_indiv_8_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Beeker" & Behavior == "Contact")
+
+indiv_3_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_3_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_3_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_3_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_3_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_3_indiv_7_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_3_indiv_8_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Benny" & Behavior == "Contact")
+
+indiv_4_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_4_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_4_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_4_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_4_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_4_indiv_7_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_4_indiv_8_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bailey" & Behavior == "Contact")
+
+indiv_5_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_5_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_5_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_5_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_5_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_5_indiv_7_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_5_indiv_8_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bias" & Behavior == "Contact")
+
+indiv_6_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_6_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_6_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_6_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_6_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_6_indiv_7_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_6_indiv_8_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gonzo" & Behavior == "Contact")
+
+indiv_7_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_7_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_7_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_7_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_7_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_7_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_7_indiv_8_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Gretel" & Behavior == "Contact")
+
+indiv_8_indiv_1_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_8_indiv_2_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_8_indiv_3_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_8_indiv_4_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_8_indiv_5_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_8_indiv_6_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_8_indiv_7_contact <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+
+# ----
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_contact + indiv_2_indiv_1_contact
+dyad_2 <- indiv_1_indiv_3_contact + indiv_3_indiv_1_contact
+dyad_3 <- indiv_1_indiv_4_contact + indiv_4_indiv_1_contact
+dyad_4 <- indiv_1_indiv_5_contact + indiv_5_indiv_1_contact
+dyad_5 <- indiv_1_indiv_6_contact + indiv_6_indiv_1_contact
+dyad_6 <- indiv_1_indiv_7_contact + indiv_7_indiv_1_contact
+dyad_7 <- indiv_1_indiv_8_contact + indiv_8_indiv_1_contact
+dyad_8 <- indiv_2_indiv_3_contact + indiv_3_indiv_2_contact
+dyad_9 <- indiv_2_indiv_4_contact + indiv_4_indiv_2_contact
+dyad_10 <- indiv_2_indiv_5_contact + indiv_5_indiv_2_contact
+dyad_11 <- indiv_2_indiv_6_contact + indiv_6_indiv_2_contact
+dyad_12 <- indiv_2_indiv_7_contact + indiv_7_indiv_2_contact
+dyad_13 <- indiv_2_indiv_8_contact + indiv_8_indiv_2_contact
+dyad_14 <- indiv_3_indiv_4_contact + indiv_4_indiv_3_contact
+dyad_15 <- indiv_3_indiv_5_contact + indiv_5_indiv_3_contact
+dyad_16 <- indiv_3_indiv_6_contact + indiv_6_indiv_3_contact
+dyad_17 <- indiv_3_indiv_7_contact + indiv_7_indiv_3_contact
+dyad_18 <- indiv_3_indiv_8_contact + indiv_8_indiv_3_contact
+dyad_19 <- indiv_4_indiv_5_contact + indiv_5_indiv_4_contact
+dyad_20 <- indiv_4_indiv_6_contact + indiv_6_indiv_4_contact
+dyad_21 <- indiv_4_indiv_7_contact + indiv_7_indiv_4_contact
+dyad_22 <- indiv_4_indiv_8_contact + indiv_8_indiv_4_contact
+dyad_23 <- indiv_5_indiv_6_contact + indiv_6_indiv_5_contact
+dyad_24 <- indiv_5_indiv_7_contact + indiv_7_indiv_5_contact
+dyad_25 <- indiv_5_indiv_8_contact + indiv_8_indiv_5_contact
+dyad_26 <- indiv_6_indiv_7_contact + indiv_7_indiv_6_contact
+dyad_27 <- indiv_6_indiv_8_contact + indiv_8_indiv_6_contact
+dyad_28 <- indiv_7_indiv_8_contact + indiv_8_indiv_7_contact
+
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, 
+       dyad_11, dyad_12, dyad_13, dyad_14, dyad_15, dyad_16, dyad_17, dyad_18, dyad_19, 
+       dyad_20, dyad_21, dyad_22, dyad_23, dyad_24, dyad_25, dyad_26, dyad_27, dyad_28))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_3 <- dyad_3 / ((dyad_1 + dyad_2 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_4 <- dyad_4 / ((dyad_1 + dyad_2 + dyad_3 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_5 <- dyad_5 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_6 <- dyad_6 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_7 <- dyad_7 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_8 <- dyad_8 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_9 <- dyad_9 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_8 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_10 <- dyad_10 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_11 <- dyad_11 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_12 <- dyad_12 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_13 <- dyad_13 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_14 <- dyad_14 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_15 <- dyad_15 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_16 <- dyad_16 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_17 <- dyad_17 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_18 <- dyad_18 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_19 <- dyad_19 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_20 <- dyad_20 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_21 <- dyad_21 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_22 <- dyad_22 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_23 <- dyad_23 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_24 <- dyad_24 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_25 <- dyad_25 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_26 <- dyad_26 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_27 <- dyad_27 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_28) / 27)
+
+fbx_dyad_28 <- dyad_28 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27) / 27)
+
+
+fbx_contact <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, 
+                 fbx_dyad_15, fbx_dyad_16, fbx_dyad_17, fbx_dyad_18, fbx_dyad_19, fbx_dyad_20, fbx_dyad_21, 
+                 fbx_dyad_22, fbx_dyad_23, fbx_dyad_24, fbx_dyad_25, fbx_dyad_26, fbx_dyad_27, fbx_dyad_28)
+
+
+
+mason.data.frame <- data.frame(dyads, fbx_contact)
+
+```
+
+```{r Behavior: Grooming}
+tempdata1 <- subset(obs.data, IndividualA == "Mason" & Behavior == "Groom")
+
+indiv_1_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_1_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_1_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_1_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_1_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_1_indiv_7_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_1_indiv_8_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Scarlett" & Behavior == "Groom")
+
+indiv_2_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_2_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_2_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_2_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_2_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_2_indiv_7_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_2_indiv_8_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Beeker" & Behavior == "Groom")
+
+indiv_3_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_3_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_3_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_3_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_3_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_3_indiv_7_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_3_indiv_8_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Benny" & Behavior == "Groom")
+
+indiv_4_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_4_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_4_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_4_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_4_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_4_indiv_7_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_4_indiv_8_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bailey" & Behavior == "Groom")
+
+indiv_5_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_5_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_5_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_5_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_5_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_5_indiv_7_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_5_indiv_8_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bias" & Behavior == "Groom")
+
+indiv_6_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_6_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_6_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_6_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_6_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_6_indiv_7_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_6_indiv_8_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gonzo" & Behavior == "Groom")
+
+indiv_7_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_7_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_7_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_7_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_7_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_7_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_7_indiv_8_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Gretel" & Behavior == "Groom")
+
+indiv_8_indiv_1_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_8_indiv_2_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_8_indiv_3_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_8_indiv_4_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_8_indiv_5_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_8_indiv_6_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_8_indiv_7_groom <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+
+# ----
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_groom + indiv_2_indiv_1_groom
+dyad_2 <- indiv_1_indiv_3_groom + indiv_3_indiv_1_groom
+dyad_3 <- indiv_1_indiv_4_groom + indiv_4_indiv_1_groom
+dyad_4 <- indiv_1_indiv_5_groom + indiv_5_indiv_1_groom
+dyad_5 <- indiv_1_indiv_6_groom + indiv_6_indiv_1_groom
+dyad_6 <- indiv_1_indiv_7_groom + indiv_7_indiv_1_groom
+dyad_7 <- indiv_1_indiv_8_groom + indiv_8_indiv_1_groom
+dyad_8 <- indiv_2_indiv_3_groom + indiv_3_indiv_2_groom
+dyad_9 <- indiv_2_indiv_4_groom + indiv_4_indiv_2_groom
+dyad_10 <- indiv_2_indiv_5_groom + indiv_5_indiv_2_groom
+dyad_11 <- indiv_2_indiv_6_groom + indiv_6_indiv_2_groom
+dyad_12 <- indiv_2_indiv_7_groom + indiv_7_indiv_2_groom
+dyad_13 <- indiv_2_indiv_8_groom + indiv_8_indiv_2_groom
+dyad_14 <- indiv_3_indiv_4_groom + indiv_4_indiv_3_groom
+dyad_15 <- indiv_3_indiv_5_groom + indiv_5_indiv_3_groom
+dyad_16 <- indiv_3_indiv_6_groom + indiv_6_indiv_3_groom
+dyad_17 <- indiv_3_indiv_7_groom + indiv_7_indiv_3_groom
+dyad_18 <- indiv_3_indiv_8_groom + indiv_8_indiv_3_groom
+dyad_19 <- indiv_4_indiv_5_groom + indiv_5_indiv_4_groom
+dyad_20 <- indiv_4_indiv_6_groom + indiv_6_indiv_4_groom
+dyad_21 <- indiv_4_indiv_7_groom + indiv_7_indiv_4_groom
+dyad_22 <- indiv_4_indiv_8_groom + indiv_8_indiv_4_groom
+dyad_23 <- indiv_5_indiv_6_groom + indiv_6_indiv_5_groom
+dyad_24 <- indiv_5_indiv_7_groom + indiv_7_indiv_5_groom
+dyad_25 <- indiv_5_indiv_8_groom + indiv_8_indiv_5_groom
+dyad_26 <- indiv_6_indiv_7_groom + indiv_7_indiv_6_groom
+dyad_27 <- indiv_6_indiv_8_groom + indiv_8_indiv_6_groom
+dyad_28 <- indiv_7_indiv_8_groom + indiv_8_indiv_7_groom
+
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, 
+       dyad_11, dyad_12, dyad_13, dyad_14, dyad_15, dyad_16, dyad_17, dyad_18, dyad_19, 
+       dyad_20, dyad_21, dyad_22, dyad_23, dyad_24, dyad_25, dyad_26, dyad_27, dyad_28))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_3 <- dyad_3 / ((dyad_1 + dyad_2 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_4 <- dyad_4 / ((dyad_1 + dyad_2 + dyad_3 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_5 <- dyad_5 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_6 <- dyad_6 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_7 <- dyad_7 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_8 <- dyad_8 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_9 <- dyad_9 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_8 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_10 <- dyad_10 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_11 <- dyad_11 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_12 <- dyad_12 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_13 <- dyad_13 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_14 <- dyad_14 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_15 <- dyad_15 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_16 <- dyad_16 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_17 <- dyad_17 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_18 <- dyad_18 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_19 <- dyad_19 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_20 <- dyad_20 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_21 <- dyad_21 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_22 <- dyad_22 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_23 <- dyad_23 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_24 <- dyad_24 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_25 <- dyad_25 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_26 <- dyad_26 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_27 <- dyad_27 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_28) / 27)
+
+fbx_dyad_28 <- dyad_28 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27) / 27)
+
+
+fbx_groom <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, 
+                 fbx_dyad_15, fbx_dyad_16, fbx_dyad_17, fbx_dyad_18, fbx_dyad_19, fbx_dyad_20, fbx_dyad_21, 
+                 fbx_dyad_22, fbx_dyad_23, fbx_dyad_24, fbx_dyad_25, fbx_dyad_26, fbx_dyad_27, fbx_dyad_28)
+
+
+
+mason.data.frame$fbx_groom <- fbx_groom
+```
+
+```{r Behavior: Proximity}
+tempdata1 <- subset(obs.data, IndividualA == "Mason" & Behavior == "Proximity")
+
+indiv_1_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_1_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_1_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_1_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_1_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_1_indiv_7_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_1_indiv_8_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Scarlett" & Behavior == "Proximity")
+
+indiv_2_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_2_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_2_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_2_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_2_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_2_indiv_7_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_2_indiv_8_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Beeker" & Behavior == "Proximity")
+
+indiv_3_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_3_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_3_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_3_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_3_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_3_indiv_7_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_3_indiv_8_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Benny" & Behavior == "Proximity")
+
+indiv_4_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_4_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_4_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_4_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_4_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_4_indiv_7_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_4_indiv_8_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bailey" & Behavior == "Proximity")
+
+indiv_5_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_5_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_5_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_5_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_5_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_5_indiv_7_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_5_indiv_8_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bias" & Behavior == "Proximity")
+
+indiv_6_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_6_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_6_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_6_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_6_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_6_indiv_7_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_6_indiv_8_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gonzo" & Behavior == "Proximity")
+
+indiv_7_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_7_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_7_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_7_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_7_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_7_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_7_indiv_8_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Gretel" & Behavior == "Proximity")
+
+indiv_8_indiv_1_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_8_indiv_2_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_8_indiv_3_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_8_indiv_4_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_8_indiv_5_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_8_indiv_6_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_8_indiv_7_prox <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+
+# ----
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_prox + indiv_2_indiv_1_prox
+dyad_2 <- indiv_1_indiv_3_prox + indiv_3_indiv_1_prox
+dyad_3 <- indiv_1_indiv_4_prox + indiv_4_indiv_1_prox
+dyad_4 <- indiv_1_indiv_5_prox + indiv_5_indiv_1_prox
+dyad_5 <- indiv_1_indiv_6_prox + indiv_6_indiv_1_prox
+dyad_6 <- indiv_1_indiv_7_prox + indiv_7_indiv_1_prox
+dyad_7 <- indiv_1_indiv_8_prox + indiv_8_indiv_1_prox
+dyad_8 <- indiv_2_indiv_3_prox + indiv_3_indiv_2_prox
+dyad_9 <- indiv_2_indiv_4_prox + indiv_4_indiv_2_prox
+dyad_10 <- indiv_2_indiv_5_prox + indiv_5_indiv_2_prox
+dyad_11 <- indiv_2_indiv_6_prox + indiv_6_indiv_2_prox
+dyad_12 <- indiv_2_indiv_7_prox + indiv_7_indiv_2_prox
+dyad_13 <- indiv_2_indiv_8_prox + indiv_8_indiv_2_prox
+dyad_14 <- indiv_3_indiv_4_prox + indiv_4_indiv_3_prox
+dyad_15 <- indiv_3_indiv_5_prox + indiv_5_indiv_3_prox
+dyad_16 <- indiv_3_indiv_6_prox + indiv_6_indiv_3_prox
+dyad_17 <- indiv_3_indiv_7_prox + indiv_7_indiv_3_prox
+dyad_18 <- indiv_3_indiv_8_prox + indiv_8_indiv_3_prox
+dyad_19 <- indiv_4_indiv_5_prox + indiv_5_indiv_4_prox
+dyad_20 <- indiv_4_indiv_6_prox + indiv_6_indiv_4_prox
+dyad_21 <- indiv_4_indiv_7_prox + indiv_7_indiv_4_prox
+dyad_22 <- indiv_4_indiv_8_prox + indiv_8_indiv_4_prox
+dyad_23 <- indiv_5_indiv_6_prox + indiv_6_indiv_5_prox
+dyad_24 <- indiv_5_indiv_7_prox + indiv_7_indiv_5_prox
+dyad_25 <- indiv_5_indiv_8_prox + indiv_8_indiv_5_prox
+dyad_26 <- indiv_6_indiv_7_prox + indiv_7_indiv_6_prox
+dyad_27 <- indiv_6_indiv_8_prox + indiv_8_indiv_6_prox
+dyad_28 <- indiv_7_indiv_8_prox + indiv_8_indiv_7_prox
+
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, 
+       dyad_11, dyad_12, dyad_13, dyad_14, dyad_15, dyad_16, dyad_17, dyad_18, dyad_19, 
+       dyad_20, dyad_21, dyad_22, dyad_23, dyad_24, dyad_25, dyad_26, dyad_27, dyad_28))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_3 <- dyad_3 / ((dyad_1 + dyad_2 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_4 <- dyad_4 / ((dyad_1 + dyad_2 + dyad_3 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_5 <- dyad_5 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_6 <- dyad_6 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_7 <- dyad_7 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_8 <- dyad_8 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_9 <- dyad_9 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_8 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_10 <- dyad_10 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_11 <- dyad_11 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_12 <- dyad_12 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_13 <- dyad_13 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_14 <- dyad_14 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_15 <- dyad_15 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_16 <- dyad_16 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_17 <- dyad_17 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_18 <- dyad_18 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_19 <- dyad_19 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_20 <- dyad_20 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_21 <- dyad_21 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_22 <- dyad_22 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_23 <- dyad_23 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_24 <- dyad_24 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_25 <- dyad_25 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_26 <- dyad_26 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_27 <- dyad_27 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_28) / 27)
+
+fbx_dyad_28 <- dyad_28 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27) / 27)
+
+
+fbx_prox <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, 
+                 fbx_dyad_15, fbx_dyad_16, fbx_dyad_17, fbx_dyad_18, fbx_dyad_19, fbx_dyad_20, fbx_dyad_21, 
+                 fbx_dyad_22, fbx_dyad_23, fbx_dyad_24, fbx_dyad_25, fbx_dyad_26, fbx_dyad_27, fbx_dyad_28)
+
+
+
+mason.data.frame$fbx_prox <- fbx_prox
+```
+
+```{r Behavior: Contact-Feed}
+tempdata1 <- subset(obs.data, IndividualA == "Mason" & Behavior == "Contact-Feed")
+
+indiv_1_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_1_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_1_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_1_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_1_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_1_indiv_7_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_1_indiv_8_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Scarlett" & Behavior == "Contact-Feed")
+
+indiv_2_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_2_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_2_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_2_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_2_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_2_indiv_7_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_2_indiv_8_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Beeker" & Behavior == "Contact-Feed")
+
+indiv_3_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_3_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_3_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_3_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_3_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_3_indiv_7_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_3_indiv_8_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Benny" & Behavior == "Contact-Feed")
+
+indiv_4_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_4_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_4_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_4_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_4_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_4_indiv_7_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_4_indiv_8_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bailey" & Behavior == "Contact-Feed")
+
+indiv_5_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_5_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_5_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_5_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_5_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_5_indiv_7_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_5_indiv_8_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bias" & Behavior == "Contact-Feed")
+
+indiv_6_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_6_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_6_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_6_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_6_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_6_indiv_7_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_6_indiv_8_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gonzo" & Behavior == "Contact-Feed")
+
+indiv_7_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_7_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_7_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_7_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_7_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_7_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_7_indiv_8_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Gretel" & Behavior == "Contact-Feed")
+
+indiv_8_indiv_1_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_8_indiv_2_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_8_indiv_3_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_8_indiv_4_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_8_indiv_5_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_8_indiv_6_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_8_indiv_7_cont_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+
+# ----
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_cont_feed + indiv_2_indiv_1_cont_feed
+dyad_2 <- indiv_1_indiv_3_cont_feed + indiv_3_indiv_1_cont_feed
+dyad_3 <- indiv_1_indiv_4_cont_feed + indiv_4_indiv_1_cont_feed
+dyad_4 <- indiv_1_indiv_5_cont_feed + indiv_5_indiv_1_cont_feed
+dyad_5 <- indiv_1_indiv_6_cont_feed + indiv_6_indiv_1_cont_feed
+dyad_6 <- indiv_1_indiv_7_cont_feed + indiv_7_indiv_1_cont_feed
+dyad_7 <- indiv_1_indiv_8_cont_feed + indiv_8_indiv_1_cont_feed
+dyad_8 <- indiv_2_indiv_3_cont_feed + indiv_3_indiv_2_cont_feed
+dyad_9 <- indiv_2_indiv_4_cont_feed + indiv_4_indiv_2_cont_feed
+dyad_10 <- indiv_2_indiv_5_cont_feed + indiv_5_indiv_2_cont_feed
+dyad_11 <- indiv_2_indiv_6_cont_feed + indiv_6_indiv_2_cont_feed
+dyad_12 <- indiv_2_indiv_7_cont_feed + indiv_7_indiv_2_cont_feed
+dyad_13 <- indiv_2_indiv_8_cont_feed + indiv_8_indiv_2_cont_feed
+dyad_14 <- indiv_3_indiv_4_cont_feed + indiv_4_indiv_3_cont_feed
+dyad_15 <- indiv_3_indiv_5_cont_feed + indiv_5_indiv_3_cont_feed
+dyad_16 <- indiv_3_indiv_6_cont_feed + indiv_6_indiv_3_cont_feed
+dyad_17 <- indiv_3_indiv_7_cont_feed + indiv_7_indiv_3_cont_feed
+dyad_18 <- indiv_3_indiv_8_cont_feed + indiv_8_indiv_3_cont_feed
+dyad_19 <- indiv_4_indiv_5_cont_feed + indiv_5_indiv_4_cont_feed
+dyad_20 <- indiv_4_indiv_6_cont_feed + indiv_6_indiv_4_cont_feed
+dyad_21 <- indiv_4_indiv_7_cont_feed + indiv_7_indiv_4_cont_feed
+dyad_22 <- indiv_4_indiv_8_cont_feed + indiv_8_indiv_4_cont_feed
+dyad_23 <- indiv_5_indiv_6_cont_feed + indiv_6_indiv_5_cont_feed
+dyad_24 <- indiv_5_indiv_7_cont_feed + indiv_7_indiv_5_cont_feed
+dyad_25 <- indiv_5_indiv_8_cont_feed + indiv_8_indiv_5_cont_feed
+dyad_26 <- indiv_6_indiv_7_cont_feed + indiv_7_indiv_6_cont_feed
+dyad_27 <- indiv_6_indiv_8_cont_feed + indiv_8_indiv_6_cont_feed
+dyad_28 <- indiv_7_indiv_8_cont_feed + indiv_8_indiv_7_cont_feed
+
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, 
+       dyad_11, dyad_12, dyad_13, dyad_14, dyad_15, dyad_16, dyad_17, dyad_18, dyad_19, 
+       dyad_20, dyad_21, dyad_22, dyad_23, dyad_24, dyad_25, dyad_26, dyad_27, dyad_28))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_3 <- dyad_3 / ((dyad_1 + dyad_2 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_4 <- dyad_4 / ((dyad_1 + dyad_2 + dyad_3 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_5 <- dyad_5 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_6 <- dyad_6 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_7 <- dyad_7 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_8 <- dyad_8 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_9 <- dyad_9 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_8 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_10 <- dyad_10 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_11 <- dyad_11 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_12 <- dyad_12 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_13 <- dyad_13 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_14 <- dyad_14 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_15 <- dyad_15 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_16 <- dyad_16 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_17 <- dyad_17 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_18 <- dyad_18 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_19 <- dyad_19 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_20 <- dyad_20 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_21 <- dyad_21 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_22 <- dyad_22 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_23 <- dyad_23 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_24 <- dyad_24 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_25 <- dyad_25 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_26 <- dyad_26 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_27 <- dyad_27 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_28) / 27)
+
+fbx_dyad_28 <- dyad_28 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27) / 27)
+
+
+fbx_cont_feed <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, 
+                 fbx_dyad_15, fbx_dyad_16, fbx_dyad_17, fbx_dyad_18, fbx_dyad_19, fbx_dyad_20, fbx_dyad_21, 
+                 fbx_dyad_22, fbx_dyad_23, fbx_dyad_24, fbx_dyad_25, fbx_dyad_26, fbx_dyad_27, fbx_dyad_28)
+
+
+
+mason.data.frame$fbx_cont_feed <- fbx_cont_feed
+```
+
+```{r Behavior: Proximity Feed}
+tempdata1 <- subset(obs.data, IndividualA == "Mason" & Behavior == "Proximity-Feed")
+
+indiv_1_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_1_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_1_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_1_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_1_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_1_indiv_7_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_1_indiv_8_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Scarlett" & Behavior == "Proximity-Feed")
+
+indiv_2_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_2_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_2_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_2_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_2_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_2_indiv_7_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_2_indiv_8_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Beeker" & Behavior == "Proximity-Feed")
+
+indiv_3_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_3_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_3_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_3_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_3_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_3_indiv_7_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_3_indiv_8_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Benny" & Behavior == "Proximity-Feed")
+
+indiv_4_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_4_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_4_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_4_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_4_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_4_indiv_7_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_4_indiv_8_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bailey" & Behavior == "Proximity-Feed")
+
+indiv_5_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_5_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_5_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_5_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_5_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_5_indiv_7_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_5_indiv_8_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Bias" & Behavior == "Proximity-Feed")
+
+indiv_6_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_6_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_6_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_6_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_6_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_6_indiv_7_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+indiv_6_indiv_8_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+tempdata1 <- subset(obs.data, IndividualA == "Gonzo" & Behavior == "Proximity-Feed")
+
+indiv_7_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_7_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_7_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_7_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_7_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_7_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_7_indiv_8_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gretel"))))
+
+
+tempdata1 <- subset(obs.data, IndividualA == "Gretel" & Behavior == "Proximity-Feed")
+
+indiv_8_indiv_1_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Mason"))))
+indiv_8_indiv_2_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Scarlett"))))
+indiv_8_indiv_3_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Beeker"))))
+indiv_8_indiv_4_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Benny"))))
+indiv_8_indiv_5_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bailey"))))
+indiv_8_indiv_6_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Bias"))))
+indiv_8_indiv_7_prox_feed <- as.numeric((nrow(subset(tempdata1, IndividualB == "Gonzo"))))
+
+# ----
+
+# Now sum between dyads
+dyad_1 <- indiv_1_indiv_2_prox_feed + indiv_2_indiv_1_prox_feed
+dyad_2 <- indiv_1_indiv_3_prox_feed + indiv_3_indiv_1_prox_feed
+dyad_3 <- indiv_1_indiv_4_prox_feed + indiv_4_indiv_1_prox_feed
+dyad_4 <- indiv_1_indiv_5_prox_feed + indiv_5_indiv_1_prox_feed
+dyad_5 <- indiv_1_indiv_6_prox_feed + indiv_6_indiv_1_prox_feed
+dyad_6 <- indiv_1_indiv_7_prox_feed + indiv_7_indiv_1_prox_feed
+dyad_7 <- indiv_1_indiv_8_prox_feed + indiv_8_indiv_1_prox_feed
+dyad_8 <- indiv_2_indiv_3_prox_feed + indiv_3_indiv_2_prox_feed
+dyad_9 <- indiv_2_indiv_4_prox_feed + indiv_4_indiv_2_prox_feed
+dyad_10 <- indiv_2_indiv_5_prox_feed + indiv_5_indiv_2_prox_feed
+dyad_11 <- indiv_2_indiv_6_prox_feed + indiv_6_indiv_2_prox_feed
+dyad_12 <- indiv_2_indiv_7_prox_feed + indiv_7_indiv_2_prox_feed
+dyad_13 <- indiv_2_indiv_8_prox_feed + indiv_8_indiv_2_prox_feed
+dyad_14 <- indiv_3_indiv_4_prox_feed + indiv_4_indiv_3_prox_feed
+dyad_15 <- indiv_3_indiv_5_prox_feed + indiv_5_indiv_3_prox_feed
+dyad_16 <- indiv_3_indiv_6_prox_feed + indiv_6_indiv_3_prox_feed
+dyad_17 <- indiv_3_indiv_7_prox_feed + indiv_7_indiv_3_prox_feed
+dyad_18 <- indiv_3_indiv_8_prox_feed + indiv_8_indiv_3_prox_feed
+dyad_19 <- indiv_4_indiv_5_prox_feed + indiv_5_indiv_4_prox_feed
+dyad_20 <- indiv_4_indiv_6_prox_feed + indiv_6_indiv_4_prox_feed
+dyad_21 <- indiv_4_indiv_7_prox_feed + indiv_7_indiv_4_prox_feed
+dyad_22 <- indiv_4_indiv_8_prox_feed + indiv_8_indiv_4_prox_feed
+dyad_23 <- indiv_5_indiv_6_prox_feed + indiv_6_indiv_5_prox_feed
+dyad_24 <- indiv_5_indiv_7_prox_feed + indiv_7_indiv_5_prox_feed
+dyad_25 <- indiv_5_indiv_8_prox_feed + indiv_8_indiv_5_prox_feed
+dyad_26 <- indiv_6_indiv_7_prox_feed + indiv_7_indiv_6_prox_feed
+dyad_27 <- indiv_6_indiv_8_prox_feed + indiv_8_indiv_6_prox_feed
+dyad_28 <- indiv_7_indiv_8_prox_feed + indiv_8_indiv_7_prox_feed
+
+
+mean(c(dyad_1, dyad_2, dyad_3, dyad_4, dyad_5, dyad_6, dyad_7, dyad_8, dyad_9, dyad_10, 
+       dyad_11, dyad_12, dyad_13, dyad_14, dyad_15, dyad_16, dyad_17, dyad_18, dyad_19, 
+       dyad_20, dyad_21, dyad_22, dyad_23, dyad_24, dyad_25, dyad_26, dyad_27, dyad_28))
+
+fbx_dyad_1 <- dyad_1 / ((dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_2 <- dyad_2 / ((dyad_1 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_3 <- dyad_3 / ((dyad_1 + dyad_2 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_4 <- dyad_4 / ((dyad_1 + dyad_2 + dyad_3 + dyad_5 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_5 <- dyad_5 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_6 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_6 <- dyad_6 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_7 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_7 <- dyad_7 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_8 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_8 <- dyad_8 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_9 <- dyad_9 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                         dyad_8 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                         dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                         dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_10 <- dyad_10 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_11 <- dyad_11 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_12 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_12 <- dyad_12 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_13 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_13 <- dyad_13 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_14 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_14 <- dyad_14 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_15 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_15 <- dyad_15 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_16 <- dyad_16 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_17 <- dyad_17 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_18 <- dyad_18 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_19 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_19 <- dyad_19 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_20 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_20 <- dyad_20 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_21 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_21 <- dyad_21 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_22 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_22 <- dyad_22 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_23 <- dyad_23 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_24 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_24 <- dyad_24 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_25 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_25 <- dyad_25 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_26 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_26 <- dyad_26 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_27 + dyad_28) / 27)
+
+fbx_dyad_27 <- dyad_27 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_28) / 27)
+
+fbx_dyad_28 <- dyad_28 / ((dyad_1 + dyad_2 + dyad_3 + dyad_4 + dyad_5 + dyad_6 + dyad_7 + 
+                           dyad_8 + dyad_9 + dyad_10 + dyad_11 + dyad_12 + dyad_13 + dyad_14 + 
+                           dyad_15 + dyad_16 + dyad_17 + dyad_18 + dyad_19 + dyad_20 + dyad_21 + 
+                           dyad_22 + dyad_23 + dyad_24 + dyad_25 + dyad_26 + dyad_27) / 27)
+
+
+fbx_prox_feed <- c(fbx_dyad_1, fbx_dyad_2, fbx_dyad_3, fbx_dyad_4, fbx_dyad_5, fbx_dyad_6, fbx_dyad_7, 
+                 fbx_dyad_8, fbx_dyad_9, fbx_dyad_10, fbx_dyad_11, fbx_dyad_12, fbx_dyad_13, fbx_dyad_14, 
+                 fbx_dyad_15, fbx_dyad_16, fbx_dyad_17, fbx_dyad_18, fbx_dyad_19, fbx_dyad_20, fbx_dyad_21, 
+                 fbx_dyad_22, fbx_dyad_23, fbx_dyad_24, fbx_dyad_25, fbx_dyad_26, fbx_dyad_27, fbx_dyad_28)
+
+
+
+mason.data.frame$fbx_prox_feed <- fbx_prox_feed
+```
+
+```{r Calculate CSI}
+mason.data.frame$CSI <- with(mason.data.frame, (fbx_contact + fbx_prox + fbx_groom + fbx_prox_feed)/ 4)
+
+mean(mason.data.frame$CSI)
+median(mason.data.frame$CSI)
+```
+```{r}
+griffin.csi <- subset(griffin.data.frame, select = c(1, 7))
+logan.csi <- subset(logan.data.frame, select = c(1, 7))
+nkima.csi <- subset(nkima.data.frame, select = c(1, 7))
+mason.csi <- subset(mason.data.frame, select = c(1, 7))
+```
+
+```{r Merge all 4 groups into one df}
+csi_df <- rbind(griffin.csi, logan.csi, mason.csi, nkima.csi)
+write.xlsx(csi_df, file = "CSI.xlsx", sheetName = "Summary", append = FALSE)
+rm(tempdata1, tempdata2)
+```
+
+
+
+
+
+```{r Compile your Data Files}
+# Remove all the excess rows in the DF that are NAs
+obs.data <- obs.data[!is.na(obs.data$IndividualB),]
+
+# Write summary file for analysis, save in wd folder
+write.xlsx(obs.data, file = "MSc_Obs_Master_File.xlsx", sheetName = "Summary", append = FALSE)
+
+session.data.unclean <- read_excel("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/Data Collection and Schedule/Data Analysis and R Scripts/Group_Prosociality_Master_File.xlsx")
+
+session.data.unclean <- session.data.unclean[!is.na(session.data.unclean$subject),]
+
+rm(obs.data)
+```
+
+
+

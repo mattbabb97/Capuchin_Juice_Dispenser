@@ -1,0 +1,5 @@
+ObID,Group,Date,AMPM,Scan,TimeInSec,IndividualA,Behavior,IndividualB
+G_Mas20220702PM,Mason,2022-07-02,PM,8,1413,Gonzo,NC-Aggress,Benny
+G_Mas20220702PM,Mason,2022-07-02,PM,10,1777,Scarlett,Sexual,Inter-G
+G_Nki20220722PM,Nkima,2022-07-22,PM,9,1511,Lychee,Sexual,Inter-G
+G_Nki20220724PM,Nkima,2022-07-24,PM,10,1658,Nkima,Aggress,Inter-G

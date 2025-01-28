@@ -1,0 +1,4 @@
+ObID,Group,Date,AMPM,Scan,TimeInSec,IndividualA,Behavior,IndividualB,IndividualC,IndividualD,IndividualE
+G_Gri20220812PM,Griffin,2022-08-12,PM,3,399,Griffin,Aggress,Inter-G,,,
+G_Gri20220826PM,Griffin,2022-08-26,PM,10,1728,Griffin,Aggress,Inter-G,,,
+G_Mas20220825PM,Mason,2022-08-25,PM,4,605,Benny,Aggress,Inter-G,,,

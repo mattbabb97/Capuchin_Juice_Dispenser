@@ -1,0 +1,99 @@
+# Date and Time: Aug 25, 2022 2:09:48 PM
+# Observer: sm
+# Estrous: 
+# Comments: outside pm cloudy 81
+# Fed: Yes
+# Food in Enclosure: Yes
+# Group: MASON
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:06 Mason Solo-Feed
+00:25 Scarlett Proximity-Feed Mason
+00:39 Benny Solo-Feed
+00:50 Bias Forage
+00:58 Bailey Locomote
+01:06 Beeker Locomote
+01:10 Gonzo Solo-Feed
+01:15 Gretel Locomote
+03:02 Mason Solo-Feed
+03:34 Scarlett Solo-Feed
+03:38 Benny Solo-Feed
+03:45 Bias Inactive
+04:00 Bailey Solo-Feed
+04:10 Beeker Locomote
+04:14 Gonzo Inactive
+04:21 Gretel Locomote
+06:04 Mason Proximity Scarlett
+06:08 Scarlett Proximity Mason
+06:11 Benny Solo-Feed
+06:24 Bias Locomote
+06:33 Bailey Locomote
+06:36 Beeker Locomote
+06:38 Gonzo Solo-Feed
+07:25 Gretel Inactive
+09:03 Mason Solo-Feed
+09:10 Scarlett Solo-Feed
+09:13 Benny Solo-Feed
+09:19 Bias Forage
+09:35 Bailey Solo-Feed
+09:47 Beeker Locomote
+09:49 Gonzo Solo-Feed
+10:02 Gretel Inactive
+10:05 Benny Aggress* Inter-G
+12:13 Mason Solo-Feed
+12:20 Scarlett Solo-Feed
+12:24 Benny Inactive
+12:29 Bias Locomote
+12:35 Bailey Locomote
+12:39 Beeker Locomote
+12:42 Gonzo Solo-Feed
+12:55 Gretel Inactive
+16:16 Mason Proximity Scarlett
+16:21 Scarlett Proximity Mason
+16:25 Benny Inactive
+16:29 Bias Inactive
+16:36 Bailey Inactive
+16:42 Beeker Locomote
+16:44 Gonzo
+16:48 Gretel Locomote
+18:03 Mason Solo-Feed
+18:18 Scarlett Solo-Feed
+18:29 Benny Locomote
+18:32 Bias Locomote
+18:33 Bailey Locomote
+18:43 Beeker Locomote
+18:47 Gonzo Inactive
+19:09 Gretel Inactive
+21:07 Mason Locomote
+21:10 Benny Locomote
+21:15 Scarlett Locomote
+21:17 Bias Inactive
+21:46 Bailey Inactive
+21:51 Beeker Locomote
+21:53 Gonzo Locomote
+21:55 Gretel Locomote
+24:05 Mason Solo-Feed
+24:12 Scarlett Solo-Feed
+24:16 Benny Solo-Feed
+24:21 Bias Forage
+24:37 Beeker Solo-Feed
+24:43 Gonzo Solo-Feed
+24:49 Bailey Inactive
+25:00 Gretel Locomote
+27:02 Mason Locomote
+27:06 Scarlett Inactive
+27:12 Benny Solo-Feed
+27:35 Bias Solo-Feed
+27:49 Bailey Inactive
+27:56 Beeker Proximity Gonzo
+27:58 Gonzo Proximity Beeker
+28:00 Gretel Solo-Feed
+28:28 Benny Mason Locomote
+30:16 Scarlett Inactive
+30:19 Benny Solo-Feed
+30:23 Bias Locomote
+30:29 Bailey Solo-Feed
+30:34 Beeker Locomote
+30:39 Gonzo Solo-Feed
+30:50 Gretel Locomote

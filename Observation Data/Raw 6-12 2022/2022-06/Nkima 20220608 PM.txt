@@ -1,0 +1,54 @@
+# Date and Time: Jun 8, 2022 2:15:51 PM
+# Observer: sms
+# Estrous: 
+# Comments: outside sunny humid 79
+# Fed: Yes
+# Food in Enclosure: No
+# Group: NKIMA
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:00 Nkima Locomote
+00:06 Nala Locomote
+00:10 Gambit Locomote
+00:13 Lychee Locomote
+03:02 Nkima Inactive
+03:09 Nala Solo-Feed
+03:18 Gambit Inactive
+03:21 Lychee Solo-Feed
+06:05 Nkima Locomote
+06:08 Nala Locomote
+06:12 Gambit Locomote
+06:15 Lychee Forage
+09:05 Nkima Locomote
+09:10 Nala Inactive
+09:18 Gambit Solo-Feed
+09:35 Lychee Locomote
+12:04 Nkima Locomote
+12:09 Nala Locomote
+12:14 Gambit Inactive
+12:17 Lychee Inactive
+15:03 Nkima Solo-Feed
+15:13 Nala Inactive
+15:22 Gambit Locomote
+15:24 Lychee Inactive
+18:06 Nkima Locomote
+18:09 Nala Inactive
+18:12 Gambit Locomote
+18:16 Lychee Forage
+21:04 Nkima Locomote
+21:08 Nala Inactive
+21:13 Gambit Inactive
+21:19 Lychee Locomote
+24:13 Nkima Aggress Inter-G
+24:34 Nala Solo-Feed
+24:40 Gambit Locomote
+24:47 Lychee Locomote
+27:01 Nkima Locomote
+27:10 Nala Locomote
+27:12 Gambit Locomote
+27:15 Lychee Locomote
+30:01 Nkima Locomote
+30:10 Nala Inactive
+30:16 Gambit
+30:20 Lychee Locomote

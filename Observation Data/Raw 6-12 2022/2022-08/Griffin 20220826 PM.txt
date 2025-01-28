@@ -1,0 +1,66 @@
+# Date and Time: Aug 26, 2022 1:29:46 PM
+# Observer: kl
+# Estrous: 
+# Comments: outside, 83 and sunny
+# Fed: Yes
+# Food in Enclosure: Yes
+# Group: GRIFFIN
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:09 Griffin Locomote
+00:18 Lexi Locomote
+00:24 Lily Locomote
+00:30 Widget Inactive
+00:32 Wren Locomote
+03:06 Griffin Locomote
+03:15 Lexi Solo-Feed
+03:21 Lily Solo-Feed
+03:32 Widget Inactive
+03:38 Wren Abnormal
+06:08 Griffin Solo-Feed
+06:13 Lexi Solo-Feed
+06:25 Lily Solo-Feed
+06:31 Widget Locomote
+06:36 Wren Locomote
+09:06 Griffin Solo-Feed
+09:16 Lexi Solo-Feed
+09:22 Lily Solo-Feed
+09:27 Widget Solo-Feed
+09:32 Wren Locomote
+12:06 Griffin Locomote
+12:16 Lexi Solo-Feed
+12:23 Lily Locomote
+12:26 Widget Locomote
+12:28 Wren Locomote
+15:02 Griffin Solo-Feed
+15:10 Lexi Locomote
+15:14 Lily Locomote
+15:21 Widget Locomote
+15:25 Wren Locomote
+18:05 Griffin
+18:14 Lexi Locomote
+18:18 Lily Locomote
+18:31 Widget Locomote
+18:35 Wren Solo-Feed
+21:03 Griffin Inactive
+21:10 Lexi Locomote
+21:13 Lily Inactive
+21:20 Widget Inactive
+21:22 Wren Locomote
+24:04 Griffin Proximity-Feed Wren
+24:24 Lexi Inactive
+24:38 Lily Locomote
+24:42 Widget Inactive
+24:46 Wren Solo-Feed
+27:05 Griffin Locomote
+27:14 Lexi Locomote
+27:18 Lily Inactive
+27:21 Widget Inactive
+27:23 Wren Locomote
+28:48 Griffin Aggress* Inter-G
+30:20 Griffin Forage
+30:31 Lexi Solo-Feed
+30:35 Lily Locomote
+30:40 Widget Inactive
+30:47 Wren Locomote

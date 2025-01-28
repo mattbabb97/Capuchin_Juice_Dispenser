@@ -1,0 +1,27 @@
+---
+title: "WhatsOb Data Merge"
+---
+
+# Load packages
+
+```{r, message = FALSE}
+library(purrr)
+library(dplyr)
+library(readr)
+```
+
+# Merge merged-month files
+
+## Global
+
+```{r, message = FALSE}
+fullData = list.files('MONTHLY', pattern = 'WhatsOb_Global_Data_', full.names = T) %>% map(read_csv) %>% reduce(bind_rows)
+write_csv(fullData, 'WhatsOb_Global_Data5.30.22.csv', na = '')
+```
+
+## Ad lib
+
+```{r, message = FALSE}
+fullData = list.files('MONTHLY', pattern = 'WhatsOb_AdLib_Data_', full.names = T) %>% map(read_csv) %>% reduce(bind_rows)
+write_csv(fullData, 'WhatsOb_AdLib_Data_5.30.22.csv', na = '')
+```

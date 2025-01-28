@@ -1,0 +1,65 @@
+# Date and Time: Jun 24, 2022 2:06:28 PM
+# Observer: sms
+# Estrous: Lily
+# Comments: ouside P cloud 88
+# Fed: Yes
+# Food in Enclosure: No
+# Group: GRIFFIN
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:00 Griffin Solo-Feed
+00:07 Lexi Solo-Feed
+00:13 Lily Locomote
+00:20 Widget Locomote
+00:26 Wren Locomote
+03:01 Griffin Proximity-Feed Lily
+03:10 Lexi Inactive
+03:13 Lily Locomote
+03:16 Widget Forage
+03:23 Wren Forage
+06:05 Griffin Proximity-Feed Lexi
+06:15 Lexi Proximity Griffin
+06:21 Lily Inactive
+06:27 Widget Forage
+06:51 Wren
+09:06 Griffin Proximity Lexi
+09:12 Lexi Proximity-Feed Griffin
+09:19 Lily Locomote
+09:31 Widget Inactive
+09:40 Wren Forage
+12:05 Griffin Proximity Lexi
+12:11 Lexi Proximity Griffin
+12:16 Lily Locomote
+12:22 Widget Solo-Feed
+12:35 Wren Locomote
+15:02 Griffin Solo-Feed
+15:09 Lexi Locomote
+15:11 Lily Solo-Feed
+15:14 Widget Proximity Wren
+15:21 Wren Forage
+18:04 Griffin Solo-Feed
+18:10 Lexi Solo-Feed
+18:14 Lily Locomote
+18:25 Widget Solo-Feed
+18:34 Wren Locomote
+21:13 Griffin Solo-Feed
+21:18 Lexi Locomote
+21:21 Lily Locomote
+21:23 Widget Solo-Feed
+21:30 Wren Forage
+24:07 Griffin Solo-Feed
+24:12 Lexi Solo-Feed
+24:19 Lily Locomote
+24:21 Widget Proximity Wren
+24:26 Wren Proximity Widget
+27:02 Griffin Inactive
+27:07 Lexi Solo-Feed
+27:10 Lily Inactive
+27:17 Widget Locomote
+27:20 Wren Forage
+30:06 Griffin Solo-Feed
+30:11 Lexi Locomote
+30:20 Lily Locomote
+30:22 Widget Locomote
+30:26 Wren Locomote

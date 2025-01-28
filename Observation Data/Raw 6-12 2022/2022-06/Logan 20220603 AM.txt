@@ -1,0 +1,79 @@
+# Date and Time: Jun 3, 2022 8:32:52 AM
+# Observer: mmn
+# Estrous: 
+# Comments: inside am, sunny outside
+# Fed: No
+# Food in Enclosure: No
+# Group: LOGAN
+# Data: 
+#
+Timestamp IndividualA Behavior IndividualB
+00:03 Logan Locomote
+00:09 Ivory Locomote
+00:14 Ira Inactive
+00:23 Irene Inactive
+00:32 Paddy Inactive
+00:36 Ingrid Proximity Logan
+03:07 Logan Groom Logan
+03:15 Ivory Locomote
+03:21 Ira Inactive
+03:25 Irene Locomote
+03:27 Paddy Locomote
+03:32 Ingrid Groom Logan
+06:05 Logan Proximity Ivory
+06:15 Ivory Locomote
+06:28 Ira Contact Ingrid
+06:33 Irene
+06:38 Paddy Locomote
+06:52 Ingrid Groom Ira
+09:03 Logan Locomote
+09:13 Ivory Locomote
+09:22 Ira Inactive
+09:28 Irene Locomote
+09:34 Paddy Locomote
+09:37 Ingrid Groom Logan
+12:04 Logan Contact Ira Ingrid
+12:14 Ivory Locomote
+12:17 Ira Groom Logan
+12:20 Ira Proximity Ingrid
+12:24 Irene Locomote
+12:26 Paddy Locomote
+12:34 Ingrid Groom Logan
+12:37 Ingrid Proximity Ira
+15:07 Logan Locomote
+15:12 Ivory Locomote
+15:26 Ira Inactive
+15:31 Irene Locomote
+15:33 Paddy Inactive
+15:39 Ingrid Locomote
+18:10 Logan Locomote
+18:13 Ivory Locomote
+18:20 Ira Manipulate
+18:24 Irene Locomote
+18:29 Paddy Inactive
+18:33 Ingrid Locomote
+21:02 Logan Locomote
+21:06 Ivory Locomote
+21:10 Ira Inactive
+21:14 Irene Locomote
+21:15 Paddy Locomote
+21:21 Ingrid
+24:05 Logan Locomote
+24:13 Ivory Inactive
+24:18 Ira Groom Ira
+24:30 Irene Locomote
+24:34 Paddy Locomote
+24:37 Ingrid
+27:03 Logan Locomote
+27:05 Ivory Locomote
+27:08 Ira Inactive
+27:15 Irene Locomote
+27:21 Paddy Inactive
+27:25 Ingrid Locomote
+30:02 Logan Contact Ira
+30:09 Ivory Locomote
+30:11 Ira Groom Logan
+30:17 Irene Locomote
+30:21 Paddy Locomote
+30:23 Ingrid Groom Logan
+30:28 Ingrid Proximity Ira
