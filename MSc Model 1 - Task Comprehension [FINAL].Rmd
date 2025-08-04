@@ -119,10 +119,101 @@ run_df <- subset(runs_per_session, select = c("subject", "session_number", "tota
 
 df <- merge(pull_df, run_df, by = c("subject", "session_number"), all.x = TRUE)
 
-# Step 1: Calculate average pulls per session type for each subject
 detach("package:Rmisc")
 detach("package:plyr")
 
+temp_df_1 <- subset(df, session_type == "Accessible")
+temp_df_2 <- subset(df, session_type == "Inaccessible")
+
+temp_df_1 <- temp_df_1 %>%
+  group_by(subject) %>%
+  arrange(subject, session_number) %>%
+  mutate(relative_session_number = row_number()) %>%
+  ungroup()
+
+temp_df_2 <- temp_df_2 %>%
+  group_by(subject) %>%
+  arrange(subject, session_number) %>%
+  mutate(relative_session_number = row_number()) %>%
+  ungroup()
+
+temp_df_1 <- subset(temp_df_1, relative_session_number >= 21)
+
+temp_df_1$pulls_minus_runs <- (temp_df_1$number_of_pulls - temp_df_1$total_run)
+
+temp_df_2 <- subset(temp_df_2, relative_session_number >= 5)
+
+temp_df_2$pulls_minus_runs <- (temp_df_2$number_of_pulls)
+
+combined_df <- bind_rows(temp_df_1, temp_df_2)
+
+rm(temp_df_1, temp_df_2)
+
+# Step 1: Calculate average pulls per session type for each subject
+average_pulls <- combined_df %>%
+  group_by(subject, session_type) %>%
+  summarize(avg_pulls = mean(number_of_pulls), .groups = "drop")
+
+# Step 2: Split data for Accessible and Inaccessible sessions
+accessible_pulls <- average_pulls %>% filter(session_type == "Accessible")
+inaccessible_pulls <- average_pulls %>% filter(session_type == "Inaccessible")
+
+# Step 3: Run a t-test for each subject to compare Accessible vs Inaccessible average pulls
+t_test_w_runs <- average_pulls %>%
+  group_by(subject) %>%
+  do(tidy(t.test(
+    number_of_pulls ~ session_type, 
+    data = filter(combined_df, subject == unique(.$subject) & session_type %in% c("Accessible", "Inaccessible"))
+  )))
+
+# Step 4: View the results, including t-statistics and p-values for each subject
+t_test_w_runs <- t_test_w_runs %>%
+  select(subject, estimate1 = estimate1, estimate2 = estimate2, statistic, p.value)
+
+t_test_w_runs
+write.xlsx(t_test_w_runs, file = "t_test_results_w_runs.xlsx")
+
+# estimate1 = Accessible Avg
+# estimate2 = Inaccessible Avg
+
+```
+
+```{r}
+
+# Step 1: Calculate average pulls_minus_runs per session type for each subject
+average_pulls_minus_runs <- combined_df %>%
+  group_by(subject, session_type) %>%
+  summarize(avg_pulls_minus_runs = mean(pulls_minus_runs), .groups = "drop")
+
+# Step 2: Split data for Accessible and Inaccessible sessions
+accessible_pulls_minus_runs <- average_pulls_minus_runs %>% filter(session_type == "Accessible")
+inaccessible_pulls_minus_runs <- average_pulls_minus_runs %>% filter(session_type == "Inaccessible")
+
+# Step 3: Run a t-test for each subject to compare Accessible vs Inaccessible for avg_pulls_minus_runs
+t_test_no_runs <- combined_df %>%
+  group_by(subject) %>%
+  do(tidy(t.test(
+    pulls_minus_runs ~ session_type, 
+    data = filter(combined_df, subject == unique(.$subject) & session_type %in% c("Accessible", "Inaccessible"))
+  )))
+
+# Step 4: View the results, including t-statistics and p-values for each subject for avg_pulls_minus_runs
+t_test_no_runs <- t_test_no_runs %>%
+  select(subject, estimate1, estimate2, statistic, p.value)
+
+# Display the results
+t_test_no_runs
+write.xlsx(t_test_no_runs, file = "t_test_results_no_runs.xlsx")
+```
+
+
+
+
+
+  
+
+```{r Compare the Average Number of Lever Presses in Experimental Sessions to Inaccessible Controls for each individual}
+# Step 1: Calculate average pulls per session type for each subject
 average_pulls <- df %>%
   group_by(subject, session_type) %>%
   summarize(avg_pulls = mean(number_of_pulls), .groups = "drop")
@@ -188,6 +279,9 @@ When runs were removed, the following individuals still pressed the lever signfi
 (n = 5)
 Beeker, Mason, Scarlet, Griffin, Ira
 
+
+
+
 ```{r Check for Correlations between Factors}
 cor.test(as.numeric(model.data$OT), model.data$rank, method = "pearson")
 # Looks like higher ranking monkeys were more likely to have OT, which is not surprising
@@ -216,56 +310,10 @@ sd(model.data$z.rank)
 # Session Level Data
 simple_model1 <- lm(as.numeric(number_of_pulls) ~ OT + session_type + training + rank_score + session_number, data = model.data)
 
-summary(simple_model1)
 
 vif(simple_model1)
 
 # ALL VIFs should be low, around 1.0 preferably Above 2.5 is concerning
-```
-
-```{r Check for Overdispersion}
-# An assumption of Poisson Regression is that the Mean and Variance are approximately EQUAL
-
-# Total Pulls
-mean(model.data$number_of_pulls)
-var(model.data$number_of_pulls)
-
-# variance Ratio
-var(model.data$number_of_pulls)/mean(model.data$number_of_pulls)
-
-# If the variance is greater than the mean, you have overdispersion and cannot use Poisson
-# If the variance is less than the mean, you have underdispersion
-```
-
-```{r Check the Goodness of Fit to a Poisson and Negative Binomial}
-# These goodness of fit tests are more of a guideline. You want to check the Chi-squared p-value at the top of each output. If it is < 0.05 then it doesn't fit that distribution that well. If they don't fit, its okay. Its likely because you are working with very zero inflated data.
-
-# Because your data is overdispersed, a zero inflated negative binomial is going to be the best bet. Here you can see the none of the data fits a Poisson, but most of it fits negative binomial.
-
-# Entire  Model 
-# Poisson
-fit <- fitdist(model1.data[model1.data$pull_type == "total",]$number_of_pulls, "pois", discrete = TRUE)
-gofstat(fit)
-# Negative Binomial
-fit <- fitdist(model1.data[model1.data$pull_type == "total",]$number_of_pulls, "nbinom", discrete = TRUE)
-gofstat(fit)
-
-# Total pulls without OT -----
-# Poisson
-fit <- fitdist(model1.data[model1.data$OT == 0 & model1.data$pull_type == "total",]$number_of_pulls, "pois", discrete = TRUE)
-gofstat(fit)
-# Negative Binomial
-fit <- fitdist(model1.data[model1.data$OT == 0 & model1.data$pull_type == "total",]$number_of_pulls, "nbinom", discrete = TRUE)
-gofstat(fit)
-
-# Total pulls with OT -----
-# Poisson
-fit <- fitdist(model1.data[model1.data$OT == 1 & model1.data$pull_type == "total",]$number_of_pulls, "pois", discrete = TRUE)
-gofstat(fit)
-# Negative Binomial
-fit <- fitdist(model1.data[model1.data$OT == 1 & model1.data$pull_type == "total",]$number_of_pulls, "nbinom", discrete = TRUE)
-gofstat(fit)
-
 ```
 
 ```{r Make a data frame that has the runs removed}
@@ -284,121 +332,60 @@ model.data.no.run$num_pulls_runs_removed <- (model.data.no.run$number_of_pulls -
 
 table(model.data.no.run$session_type)
 ```
+```{r Make a relative session number variable}
 
-```{r Run the Models}
-# Rank as a proportion outranked, 1.00 = highest 0.00 = lowest
-QUASI_1 <- glmmTMB(number_of_pulls ~ session_type*OT + rank_score*session_type + training + session_number + (1|subject),
-                ziformula = ~1,
-                family = nbinom1, data = model.data)
+model.data$relative_session_number <- ave(
+  model.data$session_number,
+  model.data$subject,            # Optional: include if sessions are nested within subjects
+  model.data$session_type,
+  FUN = function(x) rank(x, ties.method = "first")
+)
 
-QUASI_NO_RUN <- glmmTMB(num_pulls_runs_removed ~ session_type*OT + rank_score*session_type+ training + session_number + (1|subject),
-                ziformula = ~1,
-                family = nbinom1, data = model.data.no.run)
-
-ZINB_1 <- glmmTMB(number_of_pulls ~ session_type*OT + rank_score*session_type + training + session_number + (1|subject),
-                ziformula = ~1,
-                family = nbinom2, data = model.data)
-
-random_effects_only <- glmmTMB(number_of_pulls ~ (1|subject),
-               zi = ~1,
-               family = nbinom1, data = model.data)
+model.data.no.run$relative_session_number <- ave(
+  model.data.no.run$session_number,
+  model.data.no.run$subject,            # Optional: include if sessions are nested within subjects
+  model.data.no.run$session_type,
+  FUN = function(x) rank(x, ties.method = "first")
+)
 
 ```
 
-```{r Run the Models}
-summary(QUASI_1)
+```{r Check Variance Ratio for Overdispersion}
+# An assumption of Poisson Regression is that the Mean and Variance are approximately EQUAL
 
-Anova(QUASI_1, type = 3)
+# Total Pulls
+mean(model.data$number_of_pulls)
+var(model.data$number_of_pulls)
 
-tab_model(QUASI_1,
-          show.est = TRUE, show.ci = 0.95,
-          show.p = TRUE, p.style = "numeric",
-          show.se = TRUE, show.r2 = TRUE,
-          show.zeroinf = FALSE,
-          show.re.var = FALSE, show.icc = FALSE,
-          transform = NULL,
-          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls")
+# variance Ratio
+var(model.data$number_of_pulls)/mean(model.data$number_of_pulls)
+
+# If the variance is greater than the mean, you have overdispersion and cannot use Poisson
+# If the variance is less than the mean, you have underdispersion
+
+detach("package:Rmisc")
+detach("package:plyr")
+
+summary_stats <- model.data %>%
+  group_by(subject) %>%
+  summarise(mean_pulls = mean(number_of_pulls),
+            var_pulls = var(number_of_pulls))
+
+plot(summary_stats$mean_pulls, summary_stats$var_pulls,
+     xlab = "Mean number of pulls",
+     ylab = "Variance of pulls",
+     main = "Variance vs. Mean") +
+abline(a = 0, b = 1, col = "red", lty = 2)  # Poisson reference
+
+library(plyr)
+library(Rmisc)
+
+# If the data falls along the line, you have a linear relationship between variance and mean
+  # use family = nbinom1
+# IF the data curves upward, you have a quadratic relationship between variance and mean
+  # use family = nbinom2
 ```
 
-
-```{r Run the Models}
-summary(QUASI_NO_RUN)
-
-Anova(QUASI_NO_RUN, type = 3)
-
-tab_model(QUASI_NO_RUN,
-          show.est = TRUE, show.ci = 0.95,
-          show.p = TRUE, p.style = "numeric",
-          show.se = TRUE, show.r2 = TRUE,
-          show.zeroinf = FALSE,
-          show.re.var = FALSE, show.icc = FALSE,
-          transform = NULL,
-          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls with Runs Removed")
-```
-
-
-```{r Run the Models}
-summary(ZINB_1)
-
-Anova(ZINB_1, type = 3)
-
-tab_model(ZINB_1,
-          show.est = TRUE, show.ci = 0.95,
-          show.p = TRUE, p.style = "numeric",
-          show.se = TRUE, show.r2 = TRUE,
-          show.zeroinf = FALSE,
-          show.re.var = FALSE, show.icc = FALSE,
-          transform = NULL,
-          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls with Runs Removed")
-```
-
-```{r Compare ZIP to Random Effects Only Model}
-anova(random_effects_only, QUASI_1, test = "chisq")
-```
-
-```{r Compare ZIP to ZINB Model}
-anova(QUASI_1, ZINB_1, test = "chisq")
-```
-
-
-```{r Post-Hoc Exploratory Analysis - Check the Effect of OT independent of Rank}
-QUASI_OT <- glmmTMB(number_of_pulls ~ session_type*OT + (1|subject),
-                ziformula = ~1,
-                family = nbinom1, data = model.data)
-summary(QUASI_OT)
-Anova(QUASI_OT, type = 3)
-
-tab_model(QUASI_OT,
-          show.est = TRUE, show.ci = 0.95,
-          show.p = TRUE, p.style = "numeric",
-          show.se = TRUE, show.r2 = TRUE,
-          show.zeroinf = FALSE,
-          show.re.var = FALSE, show.icc = FALSE,
-          transform = NULL,
-          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls")
-
-interaction.plot(x.factor = model.data$session_type, 
-                 trace.factor = model.data$OT, 
-                 response = model.data$number_of_pulls,  # Specify your response variable here
-                 type = "b", 
-                 fixed = FALSE, 
-                 legend = TRUE)
-```
-
-```{r Probe the Interactions - EMTRENDS}
-# EMTRENDS FIRST
-# The first output will tell you the estimated slopes for "rank_score", so in your example:
-# Experimental = 3.51 means for every 1 unit increase in rank, there is a 3.51 unit increase in lever presses in the experimental sessions
-  # The LCL and UCL are the lower and upper 95% CI values for this slope. So it is 3.51 (1.85 - 5.17)
-# Inaccessible = 1.75 means for every 1 unit increase in rank, there is a 1.75 unit increase in lever presses in the Inaccessible sessions
-
-# The next output will tell you whether the slopes of rank are significantly different from one another
-# Exp - Inacc: Estimate = 1.76 which yields a p-value of 0.0001 indicating that the slope for monkey rank in the experimental sessions was significantly different than the slope for monkey rank in the Inaccessible sessions
-
-emtrends(QUASI_1, pairwise ~ session_type, var = "rank_score", adjust = "bonferroni")
-emtrends(QUASI_NO_RUN, pairwise ~ session_type, var = "rank_score", adjust = "bonferroni")
-
-```
 
 ```{r Since you are going to visualize by category, we need to rerun the model with this to obtain significance values for the graph}
 # Rank as a grouping variable, grouping alpha males, alpha females, etc.
@@ -408,114 +395,110 @@ model.data.no.run$rank_grouping <- ifelse(model.data.no.run$subject == "Paddy", 
 model.data$rank_grouping <- as.factor(model.data$rank_grouping)
 model.data.no.run$rank_grouping <- as.factor(model.data.no.run$rank_grouping)
 
+# Check their assignments
+table(model.data$subject, model.data$rank_grouping)
 
-QUASI_GRP <- glmmTMB(number_of_pulls ~ session_type*OT + rank_grouping*session_type + training + session_number + (1|subject),
+```
+
+
+```{r Run the Models}
+QUASI_GRP <- glmmTMB(number_of_pulls ~ session_type*OT + rank_grouping*session_type + training + relative_session_number:session_type + (1|subject),
                 ziformula = ~1,
-                family = nbinom1, data = model.data)
+                family = nbinom2, data = model.data)
 
 
+# No Runs Included
+QUASI_GRP_NO_RUN <- glmmTMB(num_pulls_runs_removed ~ session_type*OT + rank_grouping*session_type  + training + relative_session_number:session_type
+                            + (1|subject),
+                        ziformula = ~1,
+                        family = nbinom2, data = model.data.no.run)
 
-QUASI_GRP_NO_RUN <- glmmTMB(num_pulls_runs_removed ~ session_type*OT + rank_grouping*session_type 
-                        + training + session_number + (1|subject),
-                ziformula = ~1,
-                family = nbinom1, data = model.data.no.run)
+random_effects_only <- glmmTMB(number_of_pulls ~ (1|subject),
+               zi = ~1,
+               family = nbinom2, data = model.data)
+
+```
+
+```{r ZINB - Rank as Category}
+summary(QUASI_GRP)
 
 Anova(QUASI_GRP, type = 3)
+
+tab_model(QUASI_GRP,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "Zero-inflated negative binomial GLMM Regression Predicting the Number of Lever Pulls")
+```
+
+```{r}
+summary(QUASI_GRP_NO_RUN)
+
 Anova(QUASI_GRP_NO_RUN, type = 3)
+
+tab_model(QUASI_GRP_NO_RUN,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "Zero-inflated negative binomial GLMM Regression Predicting the Number of Lever Pulls with Runs Removed")
 ```
 
 
-```{r Now run the contrasts to extract the EMMs for each interaction}
-# RUNS INCLUDED --------------------------------------------------------------------------------------------------------------
+```{r Compare ZINB to Random Effects Only Model}
+anova(random_effects_only, QUASI_GRP, test = "chisq")
+```
 
-# Extract the estimated marginal means for the interaction
-rm(emmeans_obj)
-emmeans_obj <- emmeans(QUASI_GRP, ~ session_type | rank_grouping)
-# Initialize an empty list to store contrast results
-rm(contrast_results)
-contrast_results <- list()
-
-# Loop through each level of rank_grouping
-for (i in 1:4) {  # Assuming rank_grouping levels are 1, 2, 3, 4
-  # Subset emmeans_obj to include only the current level of rank_grouping
-  emmeans_level <- subset(emmeans_obj, rank_grouping == i)
-  
-  # Compute pairwise comparisons within the current level of rank_grouping
-  contrasts <- contrast(emmeans_level, method = "pairwise", by = NULL,
-                        at = list(session_type = c("Accessible", "Inaccessible", "Selfish")),
-                        adjust = "bonferroni")
-  
-  # Store the contrast results in the list, using the rank_grouping level as a tag
-  contrast_results[[paste("Rank", i)]] <- contrasts
-}
-
-
-
-for (key in names(contrast_results)) {
-  cat("Contrasts for", key, ":\n")
-  print(summary(contrast_results[[key]]))
-  cat("\n")
-}
-
-# RUNS EXCLUDED ---------------------------------------------------------------------------------------------------------------------------
-
-rm(emmeans_obj_no_runs)
-emmeans_obj_no_runs <- emmeans(QUASI_GRP_NO_RUN, ~ session_type | rank_grouping)
-rm(contrast_results_no_runs)
-contrast_results_no_runs <- list()
-
-for (i in 1:4) {
-  emmeans_level <- subset(emmeans_obj_no_runs, rank_grouping == i)
-  
-  contrasts <- contrast(emmeans_level, method = "pairwise", by = NULL,
-                        at = list(session_type = c("Accessible", "Inaccessible", "Selfish")),
-                        adjust = "bonferroni")
-  
-  # Store the contrast results in the list, using the rank_grouping level as a tag
-  contrast_results_no_runs[[paste("Rank", i)]] <- contrasts
-}
-
-for (key in names(contrast_results_no_runs)) {
-  cat("Contrasts for", key, ":\n")
-  print(summary(contrast_results_no_runs[[key]]))
-  cat("\n")
-}
-
-
+```{r Probe Rank x Session Type Interaction}
+emm <- emmeans(QUASI_GRP, ~ rank_grouping | session_type)
+summary(emm)
+contrast(emm, method = "revpairwise", by = "rank_grouping", adjust = "bonferroni")
 ```
 
 
-```{r Fix and Check Rank Categories. 4 AM, 4 AF, 4 BF, 11 Sub}
-# section rank off by Alphas, Betas, and Lowest
-model.data <- model.data.no.run
-model1.data$rank_grouping <- ifelse(model1.data$subject == "Paddy", 4, model1.data$rank_grouping)
+```{r Probe Session Type x Session Number interaction}
+trends <- emtrends(QUASI_GRP, ~ session_type, var = "relative_session_number", adjust = "bonferroni")
+summary(trends)
+pairs(trends)
+```
 
-# Make sure they are correctly grouped by alpha males, alpha females, beta females, and others
-table(model.data$subject, model.data$rank_grouping)
-model.data$rank_category <- model.data$rank_grouping
-table(model1.data$subject, model1.data$rank_grouping)
-model1.data$rank_category <- model1.data$rank_grouping
-table(runs_per_session$subject, runs_per_session$rank_grouping)
-runs_per_session$rank_category <- runs_per_session$rank_grouping
-
+```{r Repeat Probing with Runs Removed}
+emm <- emmeans(QUASI_GRP_NO_RUN, ~ rank_grouping | session_type)
+contrast(emm, method = "revpairwise", by = "rank_grouping", adjust = "bonferroni")
+```
+```{r Repeat Probing with Runs Removed}
+trends <- emtrends(QUASI_GRP_NO_RUN, ~ session_type, var = "relative_session_number", adjust = "bonferroni")
+summary(trends)
+pairs(trends)
 ```
 
 
+
+# ----------------
 ```{r Create Data Frames for Visualization of Rank x Session Type Interaction}
-model.data$rank_category <- as.factor(model.data$rank_category)
+table(model.data$subject, model.data$rank_grouping)
+
+model.data$rank_grouping <- as.factor(model.data$rank_grouping)
 
 model.data$session_type <- factor(model.data$session_type, levels = c("Accessible", "Inaccessible", "Selfish"))
 levels(model.data$session_type) <- c("Experimental", "Inaccessible", "Selfish")
 
+library(plyr)
+library(Rmisc)
 
-rank_by_session_df <- summarySE(model.data, measurevar="number_of_pulls", groupvars=c("rank_category", "session_type"))
+rank_by_session_df <- summarySE(model.data, measurevar="number_of_pulls", groupvars=c("rank_grouping", "session_type"))
 
-runs_by_session_df <- summarySE(runs_per_session, measurevar = "total_run", groupvars=c("rank_category"))
+runs_by_session_df <- summarySE(runs_per_session, measurevar = "total_run", groupvars=c("rank_grouping"))
 
 runs_by_session_df$session_type <- "exp_w_runs"
 names(runs_by_session_df)[3] <- "number_of_pulls"
 
-runs_by_session_df <- runs_by_session_df[, c("rank_category", "session_type", "N", "number_of_pulls", "sd", "se", "ci")]
+runs_by_session_df <- runs_by_session_df[, c("rank_grouping", "session_type", "N", "number_of_pulls", "sd", "se", "ci")]
 
 runs_by_session_df <- rbind(runs_by_session_df, subset(rank_by_session_df, session_type == "Experimental"))
 
@@ -547,7 +530,7 @@ rbs_cont <- subset(rank_by_session_df, session_type == "Inaccessible" | session_
 
 ```{r Probe Significant interactions}
 rank_by_session_df$session_type <- factor(rank_by_session_df$session_type, levels = c("Experimental","Runs","Inaccessible","Selfish"))
-rank_by_session_df$rank_category <- factor(rank_by_session_df$rank_category, 
+rank_by_session_df$rank_grouping <- factor(rank_by_session_df$rank_grouping, 
                                            levels = 1:4, labels = c("Alpha Males","Alpha Females","Beta Females","All Others"))
 rank_by_session_df$runs <- ifelse(rank_by_session_df$session_type == "Runs", 1, 0)
 rank_by_session_df$session_type[rank_by_session_df$session_type == "Runs"] <- "Experimental"
@@ -568,38 +551,41 @@ rank_by_session_graph <- ggplot(rank_by_session_df, aes(x = factor(session_type)
                     scale_y_continuous(breaks=seq(0,70,10)) +
                     scale_fill_manual(values= c("darkgreen", "green3"), 
                                        name = "", labels = c("All Presses", "Presses with Runs Removed")) +
-                    facet_wrap(~rank_category) +
+                    facet_wrap(~rank_grouping) +
                     theme_bw()
 
 rank_by_session_graph
 ```
 
-
 ```{r Probe Significant interactions}
-rank_by_session_df$rank_category <- factor(rank_by_session_df$rank_category, 
+detach("package:Rmisc")
+detach("package:plyr")
+
+
+rank_by_session_df$rank_grouping <- factor(rank_by_session_df$rank_grouping, 
                                            levels = c("Alpha Males","Alpha Females","Beta Females","All Others"), labels = 1:4)
 
-low_df <- subset(rank_by_session_df, rank_category == 4)
-beta_df <- subset(rank_by_session_df, rank_category == 3)
-alphaF_df <- subset(rank_by_session_df, rank_category == 2)
-alphaM_df <-subset(rank_by_session_df, rank_category == 1)
+
+low_df <- subset(rank_by_session_df, rank_grouping == 4)
+beta_df <- subset(rank_by_session_df, rank_grouping == 3)
+alphaF_df <- subset(rank_by_session_df, rank_grouping == 2)
+alphaM_df <-subset(rank_by_session_df, rank_grouping == 1)
 
 # 7586 Total Lever Presses across all session types
 # Alpha Males 3554 lever presses (46.8%)
-sum(subset(model.data, rank_category == 1)$number_of_pulls)
+sum(subset(model.data, rank_grouping == 1)$number_of_pulls)
 
 # Alpha Females 678 lever presses (8.9%)
-sum(subset(model.data, rank_category == 2)$number_of_pulls)
+sum(subset(model.data, rank_grouping == 2)$number_of_pulls)
 
 # Beta Females 2592 lever presses (34.2%)
-sum(subset(model.data, rank_category == 3)$number_of_pulls)
+sum(subset(model.data, rank_grouping == 3)$number_of_pulls)
 
 # Alpha Males 762 lever presses (10.0%)
-sum(subset(model.data, rank_category == 4)$number_of_pulls)
+sum(subset(model.data, rank_grouping == 4)$number_of_pulls)
 ```
 
-
-```{r Probe Significant interactions}
+```{r Graph Significant interactions}
 low_ranking_graph <-ggplot(low_df, aes(x = factor(session_type), 
                                   y = number_of_pulls,
                                   ymin = number_of_pulls - ci, 
@@ -614,10 +600,11 @@ low_ranking_graph <-ggplot(low_df, aes(x = factor(session_type),
                     scale_fill_manual(values= c("darkgreen", "green3"), 
                                       name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
-                                annotations = "N.S.", y_position = 30, textsize = 4, tip_length = 0.20) +
+                                annotations = "**", y_position = 30, textsize = 8, tip_length = 0) +
                     geom_signif(comparisons = list(c("Experimental", "Selfish")), 
-                                annotations = "**", y_position = 60, textsize = 8, tip_length = 0.20) +
+                                annotations = "N.S.", y_position = 60, textsize = 5, tip_length = 0) +
                     ylim(0, 65) +
+                    annotate("segment", x = 1.22, xend = 2,, y = 22, yend = 22, color = "black", size = 0.5) +
                     theme_bw() +
                     theme(legend.position = "none",
                           axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
@@ -643,8 +630,9 @@ beta_female_graph <- ggplot(beta_df, aes(x = factor(session_type),
                                        name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
                     ylim(0, 65) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
-                                annotations = "***", y_position = 28, textsize = 8) +
-                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "***", y_position = 58, textsize = 8) +
+                                annotations = "***", y_position = 28, textsize = 8, tip_length = 0) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "N.S.", y_position = 58, textsize = 5, tip_length = 0) +
+                    annotate("segment", x = 1.22, xend = 2,, y = 22, yend = 22, color = "black", size = 0.5) +
                     theme_bw() +
                     theme(legend.position = "none",
                           axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
@@ -671,8 +659,10 @@ alpha_female_graph <- ggplot(alphaF_df, aes(x = factor(session_type),
                                        name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
                     ylim(0, 65) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
-                                annotations = "N.S.", y_position = 30, textsize = 4, tip_length = 0.09) +
-                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "**", y_position = 60, textsize = 8, tip_length = 0.09) +
+                                annotations = "***", y_position = 30, textsize = 8, tip_length = 0) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "N.S.", y_position = 60, 
+                                textsize = 5, tip_length = 0) +
+                    annotate("segment", x = 1.22, xend = 2,, y = 22, yend = 22, color = "black", size = 0.5) +
                     theme_bw() +
                     theme(legend.position = "none",
                           axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
@@ -698,8 +688,9 @@ alpha_male_graph <- ggplot(alphaM_df, aes(x = factor(session_type),
                                        name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
                     ylim(0, 65) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
-                                annotations = "***", y_position = 28, textsize = 8) +
-                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "***", y_position = 58, textsize = 8) +
+                                annotations = "***", y_position = 28, textsize = 8, tip_length = 0) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "*", y_position = 58, textsize = 8, tip_length = 0) +
+                    annotate("segment", x = 1.22, xend = 2,, y = 22, yend = 22, color = "black", size = 0.5) +
                     theme_bw() +
                     theme(legend.position = "none",
                           axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5, size = 14),
@@ -719,6 +710,78 @@ g_rank<-grid.arrange(alpha_male_graph, alpha_female_graph, beta_female_graph, lo
 ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/Figure_2.png", g_rank, height = 10, width = 10, units = "in")
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r Post-Hoc Exploratory Analysis - Check the Effect of OT independent of Rank}
+QUASI_OT <- glmmTMB(number_of_pulls ~ session_type*OT + (1|subject),
+                ziformula = ~1,
+                family = nbinom1, data = model.data)
+summary(QUASI_OT)
+Anova(QUASI_OT, type = 3)
+
+tab_model(QUASI_OT,
+          show.est = TRUE, show.ci = 0.95,
+          show.p = TRUE, p.style = "numeric",
+          show.se = TRUE, show.r2 = TRUE,
+          show.zeroinf = FALSE,
+          show.re.var = FALSE, show.icc = FALSE,
+          transform = NULL,
+          title = "QuasiPoisson Regression Predicting the Number of Lever Pulls")
+
+interaction.plot(x.factor = model.data$session_type, 
+                 trace.factor = model.data$OT, 
+                 response = model.data$number_of_pulls,  # Specify your response variable here
+                 type = "b", 
+                 fixed = FALSE, 
+                 legend = TRUE)
+```
+
+
+
+
 
 
 
@@ -826,7 +889,7 @@ g<-grid.arrange(logan_rank, griffin_rank, nkima_rank, mason_rank,
 ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/SOM Material/Figure_S1.png", g, height = 6, width = 10, units = "in")
 ```
 
-```{r Figure S2 - How Lever Presses Change over time in each Session Type}
+```{r Figure 3 - How Lever Presses Change over time in each Session Type}
 # Total number of pulls in Experimental Sessions
 accessible.pulls <- subset(model1.data, session_type == "Accessible")
 
@@ -840,8 +903,8 @@ selfish.pulls <- subset(selfish.pulls, pull_type == "selfish")
 
 accessible.pulls.total <- subset(accessible.pulls, pull_type == "total")
 
-detach("package:Rmisc")
-detach("package:plyr")
+#detach("package:Rmisc")
+#detach("package:plyr")
 
 accessible.pulls.total <- accessible.pulls.total %>%
   group_by(subject) %>%
@@ -870,25 +933,35 @@ selfish.pulls.subset <- subset(selfish.pulls, subject != "Bailey" & subject != "
 
 selfish.pulls.summary <- summarySE(selfish.pulls.subset, measurevar="number_of_pulls", groupvars=c("session_cat"))
 
+accessible.pulls.total.summary$ymin_capped <- pmax(0, accessible.pulls.total.summary$number_of_pulls - accessible.pulls.total.summary$ci)
+
+
 accessible_graph <- ggplot(accessible.pulls.total.summary, aes(x = factor(session_cat), 
                                           y = number_of_pulls,
-                                          ymin = number_of_pulls - ci,
+                                          ymin = ymin_capped,
                                           ymax = number_of_pulls + ci,
                                           group = N)) +
-                                geom_point() +
-                                geom_smooth(method = glm, se = TRUE, color = "red", fill = "red") +
-                                geom_errorbar(width = 0.3) +
-                                labs(x = "Session Number", y = "Lever Presses per Session", title = "Experimental Sessions") +
-                                theme_bw() +
-                                #xlim(0, 30) +
-                                #ylim(0, 20) +
-                                theme(legend.position = "none",
-                                      axis.text.x = element_text(size = 10, angle = 0, vjust = 0.5, hjust=0.5), 
-                                      axis.text = element_text(size = 8), 
-                                      axis.title = element_text(size = 20),
-                                      panel.grid.minor.x = element_blank(),
-                                      panel.grid.major.x = element_blank(),
-                                      plot.title = element_text(hjust = 0.5))
+  geom_point() +
+  geom_smooth(method = glm, se = TRUE, color = "red", fill = "red") +
+  geom_errorbar(width = 0.3) +
+  labs(x = "Session Number", y = "Lever Presses per Session", 
+       title = "Experimental Sessions") +
+  theme_bw() +
+  ylim(0, 25) +  # This is fine; error bars just won't extend below 0
+  scale_x_discrete(breaks = as.character(sort(unique(c(1, seq(5, max(as.numeric(as.character(accessible.pulls.total.summary$session_cat))), by = 5)))))) +
+  theme(
+    legend.position = "none",
+    axis.text.y = element_text(size = 15, angle = 0, vjust = 0.5, hjust = 0.5),
+    axis.text.x = element_text(size = 20, angle = 0, vjust = 0.5, hjust = 0.5), 
+    axis.text = element_text(size = 15), 
+    axis.title = element_text(size = 20),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+
+accessible_graph
 
 inaccessible_graph <- ggplot(asocial.pulls.summary, 
                                       aes(x = factor(session_cat), 
@@ -899,7 +972,8 @@ inaccessible_graph <- ggplot(asocial.pulls.summary,
                                 geom_point() +
                                 geom_line() +
                                 geom_errorbar(width = 0.3) +
-                                labs(x = "Session Number", y = "Lever Presses per Session", title = "Inaccessible Controls") +
+                                labs(x = "Session Number", y = "Lever Presses per Session", 
+                                     title = "Inaccessible Controls") +
                                 theme_bw() +
                                 ylim(0, 25) +
                                 theme(legend.position = "none",
@@ -920,7 +994,8 @@ selfish_graph <- ggplot(selfish.pulls.summary,
                                 geom_point() +
                                 geom_line() +
                                 geom_errorbar(width = 0.3) +
-                                labs(x = "Session Number", y = "Lever Presses per Session", title = "Selfish Controls") +
+                                labs(x = "Session Number", y = "Lever Presses per Session", 
+                                     title = "Selfish Controls") +
                                 theme_bw() +
                                 #xlim(0, 30) +
                                 ylim(0, 50) +
@@ -932,9 +1007,9 @@ selfish_graph <- ggplot(selfish.pulls.summary,
                                       panel.grid.major.x = element_blank(),
                                       plot.title = element_text(hjust = 0.5))
 
-Figure_S2 <- grid.arrange(accessible_graph, inaccessible_graph, selfish_graph, nrow = 1)
+Figure_3 <- grid.arrange(accessible_graph, inaccessible_graph, selfish_graph, nrow = 1)
 
-ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/SOM Material/Figure_S2.png", Figure_S2, height = 5, width = 17, units = "in")
+ggsave("C:/Users/matth/OneDrive/Documents/Georgia State/Research Projects/Group Prosociality/MANUSCRIPT/Figure_3.png", Figure_3, height = 5, width = 17, units = "in")
 
 ```
 
