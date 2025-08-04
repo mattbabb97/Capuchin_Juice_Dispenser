@@ -13,22 +13,22 @@ MSc Model 1 - Task Comprehension [FINAL].RMD
 	This file uses the data from Model_1_Data_Frame.xlsx to examine how often the subjects pressed the lever across all sessions. 
 	This is session level data used to examine task comprehension.
 	It also pulls from Model_1_Runs_per_Session.xlsx to remove lever presses that were followed by runs, which we looked at in the supplementary material.
-	This .RMD file  generates Figure 2
+	This .RMD file  generates Figure 2 and Figure 3
 
 MSc Model 2 - Relationships [FINAL].RMD
 	This file uses the data from Model_2_Data_Frame.xlsx to examine how often the subjects pressed the lever for specific recipients.
 	This .xlsx file is also session level data, but divided by the different types of lever presses
-	This .RMD file generates Figure 3
+	This .RMD file generates Figure 4
 
 MSc Model 3-4 - Reciprocity [FINAL].RMD
 	This file uses the data from Model_3_Data_Reciprocity.xlsx to examine whether the subjects engaged in reciprocity
 	This .xlsx file is session level data, but divided by the different recipients in their group
-	This .RMD file generates Figure 4
+	This .RMD file generates Figure 5
 
 Msc Model 5 - Running [FINAL].RMD
 	This file uses data from Model_5_Data_Frame.xlsx to examine the likelihood of a subject running toward the dispenser after pressing
 	This .xlsx file is a trial level data, each line of code represents one lever press
-	This .RMD file generates Figure 5
+	This .RMD file generates Figure 6
 
 All demographic files include the subject's rank, sex, and demographic information for merging purposes. We included multiple files with the same information
 because one individual's name was spelled two different ways ("Scarlett" and "Scarlet")
@@ -39,3 +39,4 @@ Instructions:
 	To run a chunk on PC, simply press CTRL+Enter to run it and move to the next chunk.
 	
 	All figures are automatically saved as .png files into the Working Directory
+
