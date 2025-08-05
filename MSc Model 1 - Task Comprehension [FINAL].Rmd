@@ -401,30 +401,32 @@ table(model.data$subject, model.data$rank_grouping)
 ```
 
 
-```{r Run the Models}
-QUASI_GRP <- glmmTMB(number_of_pulls ~ session_type*OT + rank_grouping*session_type + training + relative_session_number:session_type + (1|subject),
+```{r ZINB - Rank as Category}
+# Runs included
+MODEL_1 <- glmmTMB(number_of_pulls ~ session_type*OT + rank_grouping*session_type + 
+                       training + relative_session_number:session_type + (1|subject),
                 ziformula = ~1,
-                family = nbinom2, data = model.data)
+                family = nbinom1, data = model.data)
 
 
 # No Runs Included
-QUASI_GRP_NO_RUN <- glmmTMB(num_pulls_runs_removed ~ session_type*OT + rank_grouping*session_type  + training + relative_session_number:session_type
+MODEL_1_NO_RUN <- glmmTMB(num_pulls_runs_removed ~ session_type*OT + rank_grouping*session_type  + training + relative_session_number:session_type
                             + (1|subject),
                         ziformula = ~1,
-                        family = nbinom2, data = model.data.no.run)
+                        family = nbinom1, data = model.data.no.run)
 
 random_effects_only <- glmmTMB(number_of_pulls ~ (1|subject),
                zi = ~1,
-               family = nbinom2, data = model.data)
+               family = nbinom1, data = model.data)
 
 ```
 
 ```{r ZINB - Rank as Category}
-summary(QUASI_GRP)
+summary(MODEL_1)
 
-Anova(QUASI_GRP, type = 3)
+Anova(MODEL_1, type = 3)
 
-tab_model(QUASI_GRP,
+tab_model(MODEL_1,
           show.est = TRUE, show.ci = 0.95,
           show.p = TRUE, p.style = "numeric",
           show.se = TRUE, show.r2 = TRUE,
@@ -435,11 +437,11 @@ tab_model(QUASI_GRP,
 ```
 
 ```{r}
-summary(QUASI_GRP_NO_RUN)
+summary(MODEL_1_NO_RUN)
 
-Anova(QUASI_GRP_NO_RUN, type = 3)
+Anova(MODEL_1_NO_RUN, type = 3)
 
-tab_model(QUASI_GRP_NO_RUN,
+tab_model(MODEL_1_NO_RUN,
           show.est = TRUE, show.ci = 0.95,
           show.p = TRUE, p.style = "numeric",
           show.se = TRUE, show.r2 = TRUE,
@@ -451,28 +453,27 @@ tab_model(QUASI_GRP_NO_RUN,
 
 
 ```{r Compare ZINB to Random Effects Only Model}
-anova(random_effects_only, QUASI_GRP, test = "chisq")
+anova(random_effects_only, MODEL_1, test = "chisq")
 ```
 
 ```{r Probe Rank x Session Type Interaction}
-emm <- emmeans(QUASI_GRP, ~ rank_grouping | session_type)
-summary(emm)
+emm <- emmeans(MODEL_1, ~ rank_grouping | session_type)
 contrast(emm, method = "revpairwise", by = "rank_grouping", adjust = "bonferroni")
 ```
 
+```{r Repeat Probing with Runs Removed}
+emm <- emmeans(MODEL_1_NO_RUN, ~ rank_grouping | session_type)
+contrast(emm, method = "revpairwise", by = "rank_grouping", adjust = "bonferroni")
+```
 
 ```{r Probe Session Type x Session Number interaction}
-trends <- emtrends(QUASI_GRP, ~ session_type, var = "relative_session_number", adjust = "bonferroni")
+trends <- emtrends(MODEL_1, ~ session_type, var = "relative_session_number", adjust = "bonferroni")
 summary(trends)
 pairs(trends)
 ```
 
 ```{r Repeat Probing with Runs Removed}
-emm <- emmeans(QUASI_GRP_NO_RUN, ~ rank_grouping | session_type)
-contrast(emm, method = "revpairwise", by = "rank_grouping", adjust = "bonferroni")
-```
-```{r Repeat Probing with Runs Removed}
-trends <- emtrends(QUASI_GRP_NO_RUN, ~ session_type, var = "relative_session_number", adjust = "bonferroni")
+trends <- emtrends(MODEL_1_NO_RUN, ~ session_type, var = "relative_session_number", adjust = "bonferroni")
 summary(trends)
 pairs(trends)
 ```
@@ -600,7 +601,7 @@ low_ranking_graph <-ggplot(low_df, aes(x = factor(session_type),
                     scale_fill_manual(values= c("darkgreen", "green3"), 
                                       name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
-                                annotations = "**", y_position = 30, textsize = 8, tip_length = 0) +
+                                annotations = "N.S.", y_position = 30, textsize = 5, tip_length = 0) +
                     geom_signif(comparisons = list(c("Experimental", "Selfish")), 
                                 annotations = "N.S.", y_position = 60, textsize = 5, tip_length = 0) +
                     ylim(0, 65) +
@@ -631,7 +632,7 @@ beta_female_graph <- ggplot(beta_df, aes(x = factor(session_type),
                     ylim(0, 65) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
                                 annotations = "***", y_position = 28, textsize = 8, tip_length = 0) +
-                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "N.S.", y_position = 58, textsize = 5, tip_length = 0) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "*", y_position = 58, textsize = 8, tip_length = 0) +
                     annotate("segment", x = 1.22, xend = 2,, y = 22, yend = 22, color = "black", size = 0.5) +
                     theme_bw() +
                     theme(legend.position = "none",
@@ -642,7 +643,6 @@ beta_female_graph <- ggplot(beta_df, aes(x = factor(session_type),
                           panel.grid.major.x = element_blank(),
                           plot.title = element_text(hjust = 0.5, size = 16))
 beta_female_graph
-# N.S. for runs removed
 
 alpha_female_graph <- ggplot(alphaF_df, aes(x = factor(session_type), 
                                   y = number_of_pulls,
@@ -659,7 +659,7 @@ alpha_female_graph <- ggplot(alphaF_df, aes(x = factor(session_type),
                                        name = "", labels = c("All Lever Presses", "Presses with Runs Removed")) +
                     ylim(0, 65) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
-                                annotations = "***", y_position = 30, textsize = 8, tip_length = 0) +
+                                annotations = "**", y_position = 30, textsize = 8, tip_length = 0) +
                     geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "N.S.", y_position = 60, 
                                 textsize = 5, tip_length = 0) +
                     annotate("segment", x = 1.22, xend = 2,, y = 22, yend = 22, color = "black", size = 0.5) +
@@ -689,7 +689,7 @@ alpha_male_graph <- ggplot(alphaM_df, aes(x = factor(session_type),
                     ylim(0, 65) +
                     geom_signif(comparisons = list(c("Experimental", "Inaccessible")), 
                                 annotations = "***", y_position = 28, textsize = 8, tip_length = 0) +
-                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "*", y_position = 58, textsize = 8, tip_length = 0) +
+                    geom_signif(comparisons = list(c("Experimental", "Selfish")), annotations = "N.S.", y_position = 58, textsize = 5, tip_length = 0) +
                     annotate("segment", x = 1.22, xend = 2,, y = 22, yend = 22, color = "black", size = 0.5) +
                     theme_bw() +
                     theme(legend.position = "none",
@@ -700,7 +700,6 @@ alpha_male_graph <- ggplot(alphaM_df, aes(x = factor(session_type),
                           panel.grid.major.x = element_blank(),
                           plot.title = element_text(hjust = 0.5, size = 16))
 alpha_male_graph
-# p = 0.0205 for runs removed
 ```
 
 
